@@ -136,7 +136,7 @@ def mk_table(dd):
 if __name__ == '__main__':
     myout = report(title="CXIC0114 Run 37 Data Summary",
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
-            script=('js/ie-emulation-modes-warning.js','https://ajax.google.com/ajax/libs/jquery/1.11.1/jquery.min.js','js/toggler.js'),
+            script=('js/ie-emulation-modes-warning.js','https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js','js/toggler.js'),
             output_dir='/reg/neh/home/justing/CXI/cxic0114_run37/')
 
     myout.start_block('Meta Data', id="metadata")
@@ -157,5 +157,4 @@ if __name__ == '__main__':
     myout.mk_nav()
 
     myout._finish_page()
-
     myout.myprint(tofile=True)
