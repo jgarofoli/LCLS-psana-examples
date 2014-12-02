@@ -1,9 +1,12 @@
 import jutils
-from mpi4py import MPI
+#from mpi4py import MPI
 import data_summary
 import data_summary.data_summary_utils as dsu
 import psana
 import numpy
+import matplotlib
+matplotlib.use('Agg')
+
 import pylab
 #import jinja2 # for producing the report
 
@@ -13,13 +16,13 @@ import pylab
 #
 
 #ds = psana.DataSource('exp=CXI/cxic0114:run=37:idx')
-ds = psana.DataSource('exp=CXI/cxif7214:run=205:idx')
+#ds = psana.DataSource('exp=CXI/cxif7214:run=205:idx')
 
 
 myMPIrunner = data_summary.mpi_runner()
-myMPIrunner.set_datasource(ds)
+myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
 myMPIrunner.add_event_process('ep1',dsu.mk_counter())
-myMPIrunner.set_output_directory('./cxic0114_run37')
+#myMPIrunner.set_output_directory('./cxic0114_run37')
 
 # get the mean and rms of the gases
 # make a trend of the 
@@ -52,15 +55,24 @@ def reduce_gas_det(ss):
             for ii,val in enumerate(chnk):
                 ss.alldata[ii].append(val)
 
+    ss.results['table'] = {}
+    ss.results['figures'] = {}
     for key in sorted(ss.alldata):
         newdata = numpy.array( ss.alldata[key] )
         print "{:} mean: {:0.2f}, std: {:0.2f}".format( ss.attrs[key], newdata.mean(), newdata.std() )
+        ss.results['table'][ss.attrs[key]] = {}
+        ss.results['table'][ss.attrs[key]]['Mean'] = newdata.mean()
+        ss.results['table'][ss.attrs[key]]['RMS'] = newdata.std()
+
+        ss.results['figures'][key] = {}
         fig = pylab.figure()
         pylab.hist(newdata,bins=100,range=(0,5))
         pylab.title( ss.attrs[key] )
         pylab.xlim(0,5)
-        pylab.savefig( 'figure_{:}.pdf'.format( ss.attrs[key] ) )
-        pylab.savefig( 'figure_{:}.png'.format( ss.attrs[key] ) )
+        pylab.savefig( 'figure_gas_{:}.pdf'.format( ss.attrs[key] ) )
+        pylab.savefig( 'figure_gas_{:}.png'.format( ss.attrs[key] ) )
+        ss.results['figures'][key]['png'] = 'figure_gas_{:}.png'.format( ss.attrs[key] )
+        ss.results['figures'][key]['pdf'] = 'figure_gas_{:}.pdf'.format( ss.attrs[key] )
     return
 
 ep2.set_process_event(get_gas_det)
