@@ -137,7 +137,4 @@ myMPIrunner.add_event_process('ep4',ep4)
 
 myMPIrunner.mpirun()
 
-#myMPIrunner.mk_output_html()
-
-import data_summary.output_html
-table = data_summary.output_html.mk_table( ep4.results['table'] )
+myMPIrunner.mk_output_html()

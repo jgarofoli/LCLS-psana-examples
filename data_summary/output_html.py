@@ -138,7 +138,6 @@ if __name__ == '__main__':
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
             script=('js/ie-emulation-modes-warning.js','https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js','js/toggler.js'),
             output_dir='/reg/neh/home/justing/CXI/cxic0114_run37/')
-
     myout.start_block('Meta Data', id="metadata")
     myout.start_subblock('Data Time Information',id='datatime')
     myout.page.p('Start Time: some time<br/>End Time: some time later<br/>Duration: time time')

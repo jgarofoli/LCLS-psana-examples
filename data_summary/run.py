@@ -80,6 +80,32 @@ class mpi_runner:
         return
 
     def mk_output_html(self):
+        self.html = output_html.report(
+            title='Some Title',
+            css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
+            script=('js/ie-emulation-modes-warning.js','https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js','js/toggler.js'),
+            output_dir='/reg/neh/home/justing/CXI/cxic0114_run37/')
+        self.html.start_block('Meta Data', id="metadata")
+        self.html.start_subblock('Data Time Information',id='datatime')
+        self.html.page.p('Start Time: some time<br/>End Time: some time later<br/>Duration: time time')
+        self.html.start_subblock('Data Information', id='datainfo')
+        self.html.end_block()
+
+        self.html.start_block('Detector Data', id="detectordata")
+        self.html.end_block()
+
+        self.html.start_block('Analysis', id='analysis')
+        self.html.end_block()
+
+        # this closes the left column
+        self.html.page.div.close()
+
+        self.html.mk_nav()
+
+        self.html._finish_page()
+        self.html.myprint(tofile=True)
+
+
 
         return
 
