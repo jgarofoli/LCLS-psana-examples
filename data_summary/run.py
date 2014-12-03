@@ -16,7 +16,7 @@ class mpi_runner:
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        #self.maxEventsPerNode = 100
+        self.maxEventsPerNode = 100
         self.event_processes = {}
         self.finalize = lambda : True
         self._output_dir = './'
@@ -77,7 +77,7 @@ class mpi_runner:
             times = run.times()
             if self.rank == 0:
                 self.all_times = times
-            mylength = int(math.ceil(float(len(times))/self.size)
+            mylength = int(math.ceil(float(len(times))/self.size))
             if mylength > self.maxEventsPerNode:
                 mylength = self.maxEventsPerNode
             mytimes = times[self.rank*mylength:(self.rank+1)*mylength]
@@ -124,36 +124,35 @@ class mpi_runner:
         self.html.start_block('Meta Data', id="metadata")  ##############################################################
                                                                                                                         #
         self.html.start_subblock('Data Information',id='datatime')  ##############################################      #
-        self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:}'.format(                           #      #
+        self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:} seconds'.format(                   #      #
             time.ctime( self.all_times[0].seconds()) ,                                                           #      #
             time.ctime(self.all_times[-1].seconds()),                                                            #      #
             self.all_times[-1].seconds()-self.all_times[0].seconds() ) )                                         #      #
+                                                                                                                 #      #
+                                                                                                                        #
                                                                                                                         #
         self.html.start_subblock('Processing Information', id='datainfo')      ###################################      #
         self.html.page.p('Total events processed: {:} of {:}'.format( self.event_processes['ep1'].mergeddata[0], len(self.all_times) ) )     #      #
         self.html.page.p('Total processors: {:}'.format( self.size ) )                                           #      #
-        self.html.page.p('Wall Time: {:0.1f}'.format( time.time() - self.start_time ) )                          #      #
+        self.html.page.p('Wall Time: {:0.1f} seconds'.format( time.time() - self.start_time ) )                  #      #
                                                                                                                         #
                                                                                                                         #
         self.html.end_block()          ##################################################################################
 
-        self.html.start_block('Detector Data', id="detectordata") #######################################################  a block
-                                                                                                                        #
-        self.html.start_subblock('Gas Detectors',id='gasdet')   ####################################################    #
-        self.html.page.add( output_html.mk_table( self.event_processes['ep2'].results['table'] )() )               #    #
-        self.html.start_hidden('gasdet')                                                                           #    #
-        for img in sorted(self.event_processes['ep2'].results['figures']):                                         #    #
-            self.html.page.img(src=self.event_processes['ep2'].results['figures'][img]['png'],style='width:49%;')  #    #
-        self.html.end_hidden()                                  ####################################################    #
-                                                                                                                        #
-        self.html.start_subblock('Acqiris Detectors',id='acqdet')  #################################################    #
-        self.html.page.add( output_html.mk_table( self.event_processes['ep4'].results['table'] )() )               #    #
-        self.html.start_hidden('acqdet')                                                                           #    #
-        for img in sorted(self.event_processes['ep4'].results['figures']):                                         #    #
-            self.html.page.img(src=self.event_processes['ep4'].results['figures'][img]['png'],style='width:49%;')  #    #
-        self.html.end_hidden()                                     #################################################    #
-                                                                                                                        #
-        self.html.end_block()     #######################################################################################
+        self.html.start_block('Detector Data', id="detectordata") ################################## a block ########### 
+                                                                                                                       #
+        for ep in sorted(self.event_processes):                                                                        #
+            thisep = self.event_processes[ep]                                                                          #
+            if thisep.in_report == 'detectors':                                                                        #
+                self.html.start_subblock(thisep.title,id=ep)                ################# a sub block #########    #
+                self.html.page.add( output_html.mk_table( thisep.results['table'] )() )                           #    #
+                self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
+                for img in sorted(thisep.results['figures']):                                               #     #    #
+                    self.html.page.img(src=thisep.results['figures'][img]['png'],style='width:49%;')        #     #    #
+                self.html.end_hidden()                                           ############################     #    #
+                                                                                                                  #    #
+                                                                                                                       #
+        self.html.end_block()                                      #####################################################
 
         self.html.start_block('Analysis', id='analysis')
         self.html.end_block()

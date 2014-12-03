@@ -11,6 +11,7 @@ class event_process:
         self.reduction_args = None
         self.reduction_kwargs = None
         self.results = {}
+        self.in_report = None
 
     def set_finish(self,fun):
         """

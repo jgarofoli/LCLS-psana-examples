@@ -21,80 +21,25 @@ import pylab
 
 myMPIrunner = data_summary.mpi_runner()
 myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
+
 myMPIrunner.add_event_process('ep1',dsu.mk_counter())
 #myMPIrunner.set_output_directory('./cxic0114_run37')
 
 # get the mean and rms of the gases
 # make a trend of the 
 
-ep2 = data_summary.event_process()
-ep2.data = []
-ep2.set_reduction_step('gather')
-ep2.set_reduction_args(ep2.data)
-ep2.set_reduction_kwargs(root=0)
-ep2.src = psana.Source('BldInfo(FEEGasDetEnergy)')
-ep2.obj = psana.Bld.BldDataFEEGasDetEnergyV1
-ep2.attrs = ['f_11_ENRC', 'f_12_ENRC','f_21_ENRC','f_22_ENRC','f_63_ENRC','f_64_ENRC',]
-
-# http://mpi4py.scipy.org/docs/usrman/tutorial.html (gathering python objects)
-# get the gas detector energy and store it in the data array
-def get_gas_det(ss,pp,evt):
-    gas = evt.get(ss.obj,ss.src)
-    if gas is None:
-        return
-    ss.data.append([])
-    for attr in ss.attrs:
-        ss.data[-1].append( getattr(gas,attr)() )
-    return
-
-# calculate the mean and standard deviation of the distribution
-def reduce_gas_det(ss):
-    ss.alldata = {0: [], 1:[], 2:[], 3:[], 4:[], 5:[], }
-    for gath in ss.gathered:
-        for chnk in gath:
-            for ii,val in enumerate(chnk):
-                ss.alldata[ii].append(val)
-
-    ss.results['table'] = {}
-    ss.results['figures'] = {}
-    for key in sorted(ss.alldata):
-        newdata = numpy.array( ss.alldata[key] )
-        print "{:} mean: {:0.2f}, std: {:0.2f}".format( ss.attrs[key], newdata.mean(), newdata.std() )
-        ss.results['table'][ss.attrs[key]] = {}
-        ss.results['table'][ss.attrs[key]]['Mean'] = newdata.mean()
-        ss.results['table'][ss.attrs[key]]['RMS'] = newdata.std()
-
-        ss.results['figures'][key] = {}
-        fig = pylab.figure()
-        pylab.hist(newdata,bins=100,range=(0,5))
-        pylab.title( ss.attrs[key] )
-        pylab.xlim(0,5)
-        pylab.savefig( 'figure_gas_{:}.pdf'.format( ss.attrs[key] ) )
-        pylab.savefig( 'figure_gas_{:}.png'.format( ss.attrs[key] ) )
-        ss.results['figures'][key]['png'] = 'figure_gas_{:}.png'.format( ss.attrs[key] )
-        ss.results['figures'][key]['pdf'] = 'figure_gas_{:}.pdf'.format( ss.attrs[key] )
-    return
-
-ep2.set_process_event(get_gas_det)
-ep2.set_finish(reduce_gas_det)
-ep2.set_reduction_step('gather')
-ep2.set_reduction_args(ep2.data)
-ep2.set_reduction_kwargs(root=0)
+ep2 = dsu.mk_mean_rms_hist(
+    psana.Source('BldInfo(FEEGasDetEnergy)'),
+    psana.Bld.BldDataFEEGasDetEnergyV1,
+    ['f_11_ENRC', 'f_12_ENRC','f_21_ENRC','f_22_ENRC','f_63_ENRC','f_64_ENRC',],
+    'detectors',
+    'Gas Detectors',
+        )
 myMPIrunner.add_event_process('ep2',ep2)
 
+
 # add the EVR to the data getting routines
-ep3 = data_summary.event_process()
-ep3.data = []
-ep3.src = psana.Source('DetInfo(NoDetector.0:Evr.0)')
-
-def get_evr(ss,pp,evt):
-    evr = evt.get(psana.EvrData.DataV3, ss.src)
-    if evr is None:
-        ss.data = []
-    else:
-        ss.data = [ff.eventCode() for ff in evr.fifoEvents()]
-ep3.set_process_event(get_evr)
-
+ep3 = dsu.mk_evr()
 myMPIrunner.add_event_process('ep3',ep3)
 
 
@@ -105,6 +50,8 @@ ep4.set_reduction_step('gather')
 ep4.set_reduction_args(ep4.data)
 ep4.set_reduction_kwargs(root=0)
 ep4.src = psana.Source('DetInfo(CxiEndstation.0:Acqiris.0)')
+ep4.in_report = 'detectors'
+ep4.title = 'Acqiris'
 
 def find_peak(ss,pp,evt):
     traces = evt.get(psana.Acqiris.DataDescV1,ss.src)
@@ -146,6 +93,15 @@ ep4.set_finish(reduce_acqiris_peaks)
 
 myMPIrunner.add_event_process('ep4',ep4)
 
+ep5 = dsu.mk_mean_rms_hist(
+    psana.Source('BldInfo(EBeam)'),
+    psana.Bld.BldDataEBeamV6,
+    ['ebeamCharge','ebeamPhotonEnergy'],
+    'detectors',
+    'EBeam',
+    histranges={'ebeamCharge':(0,.3), 'ebeamPhotonEnergy': (9000,10000)}
+        )
+myMPIrunner.add_event_process('ep5',ep5)
 
 myMPIrunner.mpirun()
 

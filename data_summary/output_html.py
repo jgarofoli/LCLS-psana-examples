@@ -85,6 +85,7 @@ class report:
         return
 
     def start_subblock(self,title,id=None):
+        self.page.a('',id=id,class_='anchor')
         self.page.h4(title)
         self.sections[-1]['subsections'].append({})
         self.sections[-1]['subsections'][-1]['title'] = title
