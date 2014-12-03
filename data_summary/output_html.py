@@ -23,6 +23,7 @@ class report:
         shutil.copy( os.path.join( html_ref_dir, 'mine.css' ), os.path.join( cssdir) )
         shutil.copy( os.path.join( html_ref_dir, 'jumbotron-narrow.css' ), self.output_dir  )
         shutil.copy( os.path.join( html_ref_dir, 'js', 'bootstrap.min.js' ), os.path.join(jsdir) )
+        shutil.copy( os.path.join( html_ref_dir, 'jquery.min.js' ), os.path.join(jsdir) )
         shutil.copy( os.path.join( html_ref_dir, 'toggler.js' ), os.path.join(jsdir) )
 
         self.sections = []
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     myout = report('CXIC0114', 37,
             title="CXIC0114 Run 37 Data Summary",
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
-            script=('js/ie-emulation-modes-warning.js','https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js','js/toggler.js'),
+            script=('js/ie-emulation-modes-warning.js','js/jquery.min.js','js/toggler.js'),
             output_dir='/reg/neh/home/justing/CXI/cxic0114_run37/')
 
     myout.start_block('Meta Data', id="metadata")

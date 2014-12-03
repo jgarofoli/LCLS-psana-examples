@@ -5,6 +5,7 @@ import os
 import output_html
 import psana
 import time
+import math
 
 __version__ = 0.1
 
@@ -15,6 +16,7 @@ class mpi_runner:
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
+        #self.maxEventsPerNode = 100
         self.event_processes = {}
         self.finalize = lambda : True
         self._output_dir = './'
@@ -25,8 +27,26 @@ class mpi_runner:
         self.maxEventsPerNode = n
         return
 
+    def smart_rename(self,out):
+        if out == './':
+            return
+        while out[-1] == '/':
+            out = out[:-1]
+        ii = 0
+        while True:
+            if not os.path.isdir(out+'.{:}'.format(ii)):
+                os.rename(out,out+'.{:}'.format(ii))
+                break
+            else:
+                ii += 1
+                continue
+        return
+                     
     def set_output_directory(self,out):
         if not os.path.isdir(out) and self.rank==0:
+            os.mkdir(out)
+        elif os.path.isdir(out) and self.rank==0:
+            self.smart_rename(out)
             os.mkdir(out)
         self._output_dir = out
         time.sleep(1)
@@ -57,7 +77,7 @@ class mpi_runner:
             times = run.times()
             if self.rank == 0:
                 self.all_times = times
-            mylength = len(times)/self.size
+            mylength = int(math.ceil(float(len(times))/self.size)
             if mylength > self.maxEventsPerNode:
                 mylength = self.maxEventsPerNode
             mytimes = times[self.rank*mylength:(self.rank+1)*mylength]
@@ -98,24 +118,22 @@ class mpi_runner:
         self.html = output_html.report(  self.exp, self.run, 
             title='{:} Run {:}'.format(self.exp,self.run),
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
-            script=('js/ie-emulation-modes-warning.js','https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js','js/toggler.js'),
+            script=('js/ie-emulation-modes-warning.js','js/jquery.min.js','js/toggler.js'),
             output_dir='/reg/neh/home/justing/{:}_run{:}/'.format(self.exp,self.run))
 
         self.html.start_block('Meta Data', id="metadata")  ##############################################################
                                                                                                                         #
         self.html.start_subblock('Data Information',id='datatime')  ##############################################      #
-        self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:}'.format( 
-            time.ctime( self.all_times[0].seconds()) , 
-            time.ctime(self.all_times[-1].seconds()), 
-            self.all_times[-1].seconds()-self.all_times[0].seconds() ) )          #      #
-                                                                         #########################################      #
+        self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:}'.format(                           #      #
+            time.ctime( self.all_times[0].seconds()) ,                                                           #      #
+            time.ctime(self.all_times[-1].seconds()),                                                            #      #
+            self.all_times[-1].seconds()-self.all_times[0].seconds() ) )                                         #      #
                                                                                                                         #
         self.html.start_subblock('Processing Information', id='datainfo')      ###################################      #
-        self.html.page.p('Total events processed: {:}'.format( self.event_processes['ep1'].mergeddata[0] ) )     #      #
+        self.html.page.p('Total events processed: {:} of {:}'.format( self.event_processes['ep1'].mergeddata[0], len(self.all_times) ) )     #      #
         self.html.page.p('Total processors: {:}'.format( self.size ) )                                           #      #
-        self.html.page.p('Wall Time: {:0.1f}'.format( time.time() - self.start_time ) )
-                                                                                                                 #      #
-                                                                         #########################################      #
+        self.html.page.p('Wall Time: {:0.1f}'.format( time.time() - self.start_time ) )                          #      #
+                                                                                                                        #
                                                                                                                         #
         self.html.end_block()          ##################################################################################
 
@@ -124,14 +142,14 @@ class mpi_runner:
         self.html.start_subblock('Gas Detectors',id='gasdet')   ####################################################    #
         self.html.page.add( output_html.mk_table( self.event_processes['ep2'].results['table'] )() )               #    #
         self.html.start_hidden('gasdet')                                                                           #    #
-        for img in sorted(self.event_processes['ep2'].results['figures']):                                                 #    #
+        for img in sorted(self.event_processes['ep2'].results['figures']):                                         #    #
             self.html.page.img(src=self.event_processes['ep2'].results['figures'][img]['png'],style='width:49%;')  #    #
         self.html.end_hidden()                                  ####################################################    #
                                                                                                                         #
         self.html.start_subblock('Acqiris Detectors',id='acqdet')  #################################################    #
         self.html.page.add( output_html.mk_table( self.event_processes['ep4'].results['table'] )() )               #    #
         self.html.start_hidden('acqdet')                                                                           #    #
-        for img in sorted(self.event_processes['ep4'].results['figures']):                                                 #    #
+        for img in sorted(self.event_processes['ep4'].results['figures']):                                         #    #
             self.html.page.img(src=self.event_processes['ep4'].results['figures'][img]['png'],style='width:49%;')  #    #
         self.html.end_hidden()                                     #################################################    #
                                                                                                                         #
