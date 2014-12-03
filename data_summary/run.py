@@ -16,7 +16,7 @@ class mpi_runner:
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        self.maxEventsPerNode = 100
+        #self.maxEventsPerNode = 100
         self.event_processes = {}
         self.finalize = lambda : True
         self._output_dir = './'
@@ -81,6 +81,9 @@ class mpi_runner:
             if mylength > self.maxEventsPerNode:
                 mylength = self.maxEventsPerNode
             mytimes = times[self.rank*mylength:(self.rank+1)*mylength]
+
+            if mylength > len(mytimes):
+                mylength = len(mytimes)
 
             for ii in xrange(mylength):
                 evt = run.event(mytimes[ii])
