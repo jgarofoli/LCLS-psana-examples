@@ -16,7 +16,7 @@ class mpi_runner:
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        #self.maxEventsPerNode = 100
+        self.maxEventsPerNode = 100
         self.event_processes = {}
         self.finalize = lambda : True
         self._output_dir = './'
@@ -121,11 +121,14 @@ class mpi_runner:
         self.allcputtotal = self.comm.gather(self.cputotal, root=0)
         print "rank {:} cpu time {:}".format( self.rank, self.cputotal )
         if self.rank == 0:
+            finaltimestart = time.time()
             for ep in sorted(self.event_processes):
                 self.event_processes[ep].finish()
             self.finalize()
             self.cpu_time = sum( self.allcputtotal )
             print "total CPU time {:} seconds".format(self.cpu_time)
+            self.finaltime = time.time() - finaltimestart
+            print "CPU time for final step on rank {:} : {:} seconds".format(self.rank, self.finaltime)
         return
 
 
@@ -148,15 +151,19 @@ class mpi_runner:
             time.ctime( self.all_times[0].seconds()) ,                                                           #      #
             time.ctime(self.all_times[-1].seconds()),                                                            #      #
             self.all_times[-1].seconds()-self.all_times[0].seconds() ) )                                         #      #
-                                                                                                                 #      #
+        self.html.end_subblock()                                    ##############################################      #
                                                                                                                         #
                                                                                                                         #
         self.html.start_subblock('Processing Information', id='datainfo')      ###################################      #
-        self.html.page.p('Report time: {:}'.format(time.ctime()))
-        self.html.page.p('Total events processed: {:} of {:}'.format( self.event_processes['ep1'].mergeddata[0], len(self.all_times) ) )     #      #
+        self.html.page.p('Report time: {:}'.format(time.ctime()))                                                #      #
+        self.html.page.p('Total events processed: {:} of {:}'.format(                                            #      #
+            self.event_processes['ep1'].mergeddata[0], len(self.all_times) ) )                                   #      #
         self.html.page.p('Total processors: {:}'.format( self.size ) )                                           #      #
         self.html.page.p('Wall Time: {:0.1f} seconds'.format( time.time() - self.start_time ) )                  #      #
-        self.html.page.p('CPU Time: {:0.1f} seconds (accuracy ~10%)'.format( self.cpu_time ))
+        self.html.page.p('CPU Time: {:0.1f} seconds (accuracy ~10%)'.format( self.cpu_time ))                    #      #
+        self.html.page.p( "CPU time for final step on rank {:} : {:0.1f} seconds".format(                        #      #
+            self.rank, self.finaltime))                                                                          #      #
+        self.html.end_subblock()                                               ###################################      #
                                                                                                                         #
                                                                                                                         #
         self.html.end_block()          ##################################################################################
@@ -172,32 +179,38 @@ class mpi_runner:
                 for img in sorted(thisep.results['figures']):                                               #     #    #
                     self.html.page.img(src=thisep.results['figures'][img]['png'],style='width:49%;')        #     #    #
                 self.html.end_hidden()                                           ############################     #    #
-                                                                                                                  #    #
+                self.html.end_subblock()                                    #######################################    #
+                                                                                                                       #
                                                                                                                        #
         self.html.end_block()                                      #####################################################
 
         self.html.start_block('Analysis', id='analysis')
+        self.html.page.p('This is empty.')
         self.html.end_block()
 
-        self.html.start_block('Logging', id='logging')
-        if len(self.previous_versions) > 0:
-            self.html.start_subblock('Previous Versions',id='prevver')
-            self.html.page.table(class_='table table-condensed')
-            self.html.page.thead()
-            self.html.page.tr()
-            self.html.page.td('link')
-            self.html.page.td('date')
-            self.html.page.tr.close()
-            self.html.page.thead.close()
-            self.previous_versions.reverse()
-            for a,b in self.previous_versions:
-                self.html.page.tr()
-                self.html.page.td(a)
-                self.html.page.td(b)
-                self.html.page.tr.close()
-            self.html.page.table.close()
-
-        self.html.end_block()
+        self.html.start_block('Logging', id='logging')   ######################################## a block #############
+        self.html.page.p('link to LSF log file.')                                                                     #
+        if len(self.previous_versions) > 0:                                                                           #
+            self.html.start_subblock('Previous Versions',id='prevver') ###################### a sub block ########    #
+            self.html.start_hidden('prevver')                             ############## hidden part ####        #    #
+            self.html.page.table(class_='table table-condensed')                                        #        #    #
+            self.html.page.thead()                                                                      #        #    #
+            self.html.page.tr()                                                                         #        #    #
+            self.html.page.td('link')                                                                   #        #    #
+            self.html.page.td('date')                                                                   #        #    #
+            self.html.page.tr.close()                                                                   #        #    #
+            self.html.page.thead.close()                                                                #        #    #
+            self.previous_versions.reverse()                                                            #        #    #
+            for a,b in self.previous_versions:                                                          #        #    #
+                self.html.page.tr()                                                                     #        #    #
+                self.html.page.td(a)                                                                    #        #    #
+                self.html.page.td(b)                                                                    #        #    #
+                self.html.page.tr.close()                                                               #        #    #
+            self.html.page.table.close()                                                                #        #    #
+            self.html.end_hidden()                                        ###############################        #    #
+                                                                                                                 #    #
+            self.html.end_subblock()                                   ###########################################    #
+        self.html.end_block()                            ##############################################################
 
         # this closes the left column
         self.html.page.div.close()

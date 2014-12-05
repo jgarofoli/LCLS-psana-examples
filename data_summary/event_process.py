@@ -47,3 +47,32 @@ class event_process:
         self._process_event(self,parent,evt)
         return
 
+
+# copied from psana/Module.h
+# https://www.slac.stanford.edu/~gapon/TALKS/2013_Oct_LCLS_UserMeeting/Batch_Psana_Intro_v2.pdf pg 7
+class event_process_v2:
+    def __init__(self):
+        return
+
+    def beginJob(self):
+        return
+
+    def beginRun(self):
+        return
+
+    def beginCalibCycle(self):
+        return
+
+    def event(self, evt):
+
+        return
+
+    def endJob(self):
+        return
+
+    def endRun(self):
+        return
+
+    def endCalibCycle(self):
+        return
+

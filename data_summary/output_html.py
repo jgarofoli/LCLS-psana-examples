@@ -86,11 +86,16 @@ class report:
 
     def start_subblock(self,title,id=None):
         self.page.a('',id=id,class_='anchor')
+        self.page.div()
         self.page.h4(title)
         self.sections[-1]['subsections'].append({})
         self.sections[-1]['subsections'][-1]['title'] = title
         self.sections[-1]['subsections'][-1]['id'] = id
 
+        return
+
+    def end_subblock(self):
+        self.page.div.close()
         return
 
     def start_hidden(self,group):
