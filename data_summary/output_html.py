@@ -70,13 +70,13 @@ class report:
         self.page.p('Other Information Goes Here. Take advantage of tool tips.',style='font-size: 14px;')
         self.page.div.close()
 
-    def start_block(self,title,id=None):
+    def start_block(self,title,id=None,class_=""):
         self.sections.append({})
         self.sections[-1]['title'] = title
         self.sections[-1]['id'] = id
         self.sections[-1]['subsections'] = []
         self.page.a('',id=id,class_='anchor')
-        self.page.h3(title,class_="text-center bg-primary", onclick="toggler('{:}group');".format(id))
+        self.page.h3(title,class_="text-center bg-primary "+class_, onclick="toggler('{:}group');".format(id))
         self.page.div(id="{:}group".format(id))
         return
         

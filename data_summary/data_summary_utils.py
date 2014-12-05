@@ -71,10 +71,12 @@ def mk_mean_rms_hist(src,obj,attrs,in_report,title,histranges={}):
         ss.results['figures'] = {}
         for key in sorted(ss.alldata):
             newdata = numpy.array( ss.alldata[key] )
-            print "{:} mean: {:0.2f}, std: {:0.2f}".format( ss.attrs[key], newdata.mean(), newdata.std() )
+            print "{:} mean: {:0.2f}, std: {:0.2f}, min: {:0.2f}, max {:0.2f}".format( ss.attrs[key], newdata.mean(), newdata.std(), newdata.min(), newdata.max() )
             ss.results['table'][ss.attrs[key]] = {}
             ss.results['table'][ss.attrs[key]]['Mean'] = newdata.mean()
             ss.results['table'][ss.attrs[key]]['RMS'] = newdata.std()
+            ss.results['table'][ss.attrs[key]]['min'] = newdata.min()
+            ss.results['table'][ss.attrs[key]]['max'] = newdata.max()
 
             ss.results['figures'][key] = {}
             fig = pylab.figure()

@@ -74,10 +74,12 @@ def reduce_acqiris_peaks(ss):
     ss.results['figures'] = {}
     for evr in sorted(ss.alldata):
         newdata = numpy.array( ss.alldata[evr] )
-        print "{:} mean: {:0.2f}, std: {:0.2f}".format( evr, newdata.mean(), newdata.std() )
+        print "{:} mean: {:0.2f}, std: {:0.2f}, min {:0.2f}, max {:0.2f}".format( evr, newdata.mean(), newdata.std(), newdata.min(), newdata.max() )
         ss.results['table'][evr] = {}
         ss.results['table'][evr]['Mean Arrival Bin'] = newdata.mean()
         ss.results['table'][evr]['RMS'] = newdata.std()
+        ss.results['table'][evr]['min'] = newdata.min()
+        ss.results['table'][evr]['max'] = newdata.max()
 
         ss.results['figures'][evr] = {}
         fig = pylab.figure()

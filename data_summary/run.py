@@ -21,6 +21,8 @@ class mpi_runner:
         self.finalize = lambda : True
         self._output_dir = './'
         self.start_time = time.time()
+        self.cpu_time = 0.
+        self.previous_versions = []
         return
 
     def set_maxEventsPerNode(self,n):
@@ -34,10 +36,15 @@ class mpi_runner:
             out = out[:-1]
         ii = 0
         while True:
-            if not os.path.isdir(out+'.{:}'.format(ii)):
-                os.rename(out,out+'.{:}'.format(ii))
+            if not os.path.isdir(out+'.{:02.0f}'.format(ii)):
+                os.rename(out,out+'.{:02.0f}'.format(ii))
                 break
             else:
+                self.previous_versions.append( [out+'.{:02.0f}'.format(ii),] )
+                if os.path.isdir(out+'.{:02.0f}'.format(ii)) and os.path.isfile( out+'.{:02.0f}'.format(ii) +'/report.html'):
+                    self.previous_versions[-1].append( time.ctime( os.path.getctime(  out+'.{:02.0f}'.format(ii) +'/report.html' ) ) )
+                else: 
+                    self.previous_versions[-1].append( None )
                 ii += 1
                 continue
         return
@@ -73,6 +80,7 @@ class mpi_runner:
         return
 
     def mpirun(self):
+        cpustart = time.time()
         for run in self.ds.runs():
             times = run.times()
             if self.rank == 0:
@@ -85,6 +93,7 @@ class mpi_runner:
             if mylength > len(mytimes):
                 mylength = len(mytimes)
 
+            print "rank {:} processing {:} events".format(self.rank, mylength)
             for ii in xrange(mylength):
                 evt = run.event(mytimes[ii])
                 if evt is None:
@@ -108,16 +117,24 @@ class mpi_runner:
                 else :
                     getattr(self.comm,self.event_processes[ep].reduction_step)( *self.event_processes[ep].reduction_args, **self.event_processes[ep].reduction_kwargs )
 
+        self.cputotal = time.time() - cpustart
+        self.allcputtotal = self.comm.gather(self.cputotal, root=0)
+        print "rank {:} cpu time {:}".format( self.rank, self.cputotal )
         if self.rank == 0:
             for ep in sorted(self.event_processes):
                 self.event_processes[ep].finish()
             self.finalize()
+            self.cpu_time = sum( self.allcputtotal )
+            print "total CPU time {:} seconds".format(self.cpu_time)
         return
+
 
     def mk_output_html(self):
         if self.rank != 0:
+            print "mk_output_html rank {:} exiting".format(self.rank)
             return
 
+        print "mk_output_html rank {:} continuing".format(self.rank)
         self.html = output_html.report(  self.exp, self.run, 
             title='{:} Run {:}'.format(self.exp,self.run),
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
@@ -135,9 +152,11 @@ class mpi_runner:
                                                                                                                         #
                                                                                                                         #
         self.html.start_subblock('Processing Information', id='datainfo')      ###################################      #
+        self.html.page.p('Report time: {:}'.format(time.ctime()))
         self.html.page.p('Total events processed: {:} of {:}'.format( self.event_processes['ep1'].mergeddata[0], len(self.all_times) ) )     #      #
         self.html.page.p('Total processors: {:}'.format( self.size ) )                                           #      #
         self.html.page.p('Wall Time: {:0.1f} seconds'.format( time.time() - self.start_time ) )                  #      #
+        self.html.page.p('CPU Time: {:0.1f} seconds (accuracy ~10%)'.format( self.cpu_time ))
                                                                                                                         #
                                                                                                                         #
         self.html.end_block()          ##################################################################################
@@ -160,13 +179,36 @@ class mpi_runner:
         self.html.start_block('Analysis', id='analysis')
         self.html.end_block()
 
+        self.html.start_block('Logging', id='logging')
+        if len(self.previous_versions) > 0:
+            self.html.start_subblock('Previous Versions',id='prevver')
+            self.html.page.table(class_='table table-condensed')
+            self.html.page.thead()
+            self.html.page.tr()
+            self.html.page.td('link')
+            self.html.page.td('date')
+            self.html.page.tr.close()
+            self.html.page.thead.close()
+            self.previous_versions.reverse()
+            for a,b in self.previous_versions:
+                self.html.page.tr()
+                self.html.page.td(a)
+                self.html.page.td(b)
+                self.html.page.tr.close()
+            self.html.page.table.close()
+
+        self.html.end_block()
+
         # this closes the left column
         self.html.page.div.close()
 
         self.html.mk_nav()
 
         self.html._finish_page()
+
+        print "mk_output_html rank {:} outputing file...".format(self.rank)
         self.html.myprint(tofile=True)
+        print "mk_output_html rank {:} outputing file... finished".format(self.rank)
 
         return
 
