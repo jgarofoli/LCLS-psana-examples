@@ -4,9 +4,12 @@ import psana
 from mpi4py import MPI
 import math
 import pylab
+#import code
+#code.interact(None,None,locals())
 
 class trend_bin(object):
     def __init__(self,begin_time,end_time):
+        #print "*** new trend_bin ***"
         self.begin_time = begin_time
         self.end_time   = end_time
         self.n         = None
@@ -17,7 +20,14 @@ class trend_bin(object):
         self.maxval    = None
         self.avg       = None
 
+    def __contains__(self,time):
+        if time >= self.begin_time and time < self.end_time:
+            return True
+        else :
+            return False
+
     def add_entry(self,time,val):
+        #print time, self.begin_time, self.end_time
         if time >= self.begin_time and time < self.end_time:
             self._add(time,val)
         else :
@@ -55,17 +65,78 @@ class trend_bin(object):
         newbin.std = math.sqrt( self.n/newbin.n * self.std**2 + other.n/newbin.n * other.std**2 )
         return newbin
 
-
 class mytrend(object):
     def __init__(self,period_window):
-        self.period_window=period_window
+        self.period_window=period_window # this should be in seconds
+        self.trend_periods = []
         return
 
+    def get_begin_end_times(self,time):
+        begin_time = round(self.period_window * round( time / self.period_window, 9 ), 9) # all this rounding is to avoid floating point errors, there could be a more clever way
+        end_time   = round(begin_time + self.period_window, 9)
+        return begin_time, end_time
+
     def add_entry(self,time,val):
+        if len(self.trend_periods) == 0:
+            begin_time, end_time = self.get_begin_end_times(time)
+            #print time, begin_time, end_time
+            self.trend_periods.append( trend_bin( begin_time, end_time ) )
+        if time in self.trend_periods[-1]:
+            self.trend_periods[-1].add_entry(time,val)
+        else :
+            added = False
+            for tp in self.trend_periods:
+                if time in tp:
+                    tp.add_entry(time,val)
+                    added = True
+                    break
+            if not added:
+                begin_time, end_time = self.get_begin_end_times(time)
+                self.trend_periods.append( trend_bin( begin_time, end_time ) )
+                self.trend_periods[-1].add_entry(time,val)
         return
+
+    def dump(self):
+        for tp in self.trend_periods:
+            print "[{:0.3f},{:0.3f}) min: {:0.2f}, max: {:0.2f}, mean: {:0.2f}, std: {:0.2f}".format( tp.begin_time, tp.end_time, tp.minval, tp.maxval, tp.avg, tp.std)
 
     def __add__(self,other):
         return
+
+    def merge(self):
+        """ merge bins that have the same begin_time and end_time
+        """
+        return
+
+    def sort(self):
+        """ sort in place
+        """
+        return
+
+    def getxs(self):
+        return [ ii.begin_time for ii in self.trend_periods ]
+
+    def getmeans(self):
+        return [ ii.avg for ii in self.trend_periods ]
+    def getmins(self):
+        return [ ii.minval for ii in self.trend_periods ]
+    def getmaxs(self):
+        return [ ii.maxval for ii in self.trend_periods ]
+    def getstds(self):
+        return [ ii.std for ii in self.trend_periods ]
+
+    def reduce(self,comm,reducer_rank):
+        # the hard part?
+        self.gathered = comm.gather( self.trend_periods, root=reducer_rank) 
+
+        if comm.Get_rank() == reducer_rank:
+            reduced_trend = mytrend(self.period_window)
+            for gath in self.gathered:
+                reduced_trend.trend_periods.extend(gath)
+            
+            reduced_trend.merge()
+            reduced_trend.sort()
+            return reduced_trend
 
 class myhist(object):
     # to do: implement __add__(self,other)
@@ -212,15 +283,72 @@ class evr(event_process.event_process_v2):
         self.parent.shared['evr'] = self.evr
         return
 
+class time_fiducials(event_process.event_process_v2):
+    def __init__(self):
+        self.timestamp = ()
+        self.src = psana.EventId
+
+    def beginJob(self):
+        self.parent.timestamp = self.timestamp
+        self.parent.shared['timestamp'] = self.timestamp
+
+    def event(self,evt):
+        ts = evt.get(self.src)
+        if ts is None:
+            self.timestamp = ()
+        else :
+            self.timestamp = ts.time()
+
+        self.parent.shared['timestamp'] = self.timestamp
+        return
+
 class simple_trends(event_process.event_process_v2):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
         return
 
-    def set_stuff(self,psana_src,psana_device,device_attrs,avg_window):
+    def set_stuff(self,psana_src,psana_device,device_attrs,period_window):
         self.src         = psana_src
         self.dev         = psana_device
+        self.dev_attrs   = device_attrs
+        self.period_window = period_window
+        return
+
+    def beginJob(self):
+        self.trends = {}
+        for attr in self.dev_attrs:
+            self.trends[attr] = mytrend(self.period_window)
+        return
+
+    def event(self, evt):
+        gas = evt.get(self.dev,self.src)
+        if gas is None:
+            return
+        this_ts = self.parent.shared['timestamp'][0] + self.parent.shared['timestamp'][1]/1.0e9
+        for attr in self.dev_attrs:
+            val = getattr(gas,attr)()     
+            self.trends[attr].add_entry( this_ts, val )
+
+    def endJob(self):
+        self.reduced_trends = {}
+        for attr in self.dev_attrs:
+            self.reduced_trends[attr] = self.trends[attr].reduce(self.parent.comm,self.reducer_rank)
+
+        if self.parent.rank == self.reducer_rank:
+            self.output['figures'] = []
+            self.output['table'] = {}
+            for attr in self.dev_attrs:
+                fig = pylab.figure()
+                thisxs    = self.reduced_trends[attr].getxs()
+                thismeans = self.reduced_trends[attr].getmeans()
+                thismins = self.reduced_trends[attr].getmins()
+                thismaxs = self.reduced_trends[attr].getmaxs()
+                pylab.plot(thisxs,thismeans,'k')
+                pylab.plot(thisxs,thismaxs,'r')
+                pylab.plot(thisxs,thismins,'b')
+                pylab.title(attr)
+                pylab.savefig('figure_trend_{:}.pdf'.format(attr))
         return
 
 class simple_stats(event_process.event_process_v2):
@@ -241,6 +369,8 @@ class simple_stats(event_process.event_process_v2):
 
     def event(self,evt):
         gas = evt.get(self.dev,self.src)
+        if gas is None:
+            return
         for attr in self.dev_attrs:
             val = getattr(gas,attr)()
             #print attr, val
@@ -335,6 +465,7 @@ class acqiris(event_process.event_process_v2):
 
 
 if __name__ == "__main__":
+    import jutils
     myh = myhist(11,-1,10)
     for x in range(10):
         myh.fill(x)
@@ -360,6 +491,14 @@ if __name__ == "__main__":
 
     print "all std: {:}".format( mytbin_all.std )
     print "new std: {:}".format( mytbin_new.std )
+
+
+    thistrend = mytrend(0.2)
+    for t in xrange(1000):
+        this_t = t/100.
+        thistrend.add_entry( this_t, R.uniform(0,1) )
+
+    thistrend.dump()
 
 
 

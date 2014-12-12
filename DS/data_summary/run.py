@@ -236,7 +236,7 @@ class job_v2(object):
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        self.maxEventsPerNode = 100
+        self.maxEventsPerNode = 360
         self.all_times = []
         self.shared = {}
         self.output = []
