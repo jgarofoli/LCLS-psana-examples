@@ -19,7 +19,7 @@ import pylab
 #ds = psana.DataSource('exp=CXI/cxif7214:run=205:idx')
 
 
-myMPIrunner = data_summary.mpi_runner()
+myMPIrunner = data_summary.job()
 myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
 
 myMPIrunner.add_event_process('ep1',dsu.mk_counter())

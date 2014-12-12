@@ -7,10 +7,10 @@ import psana
 import time
 import math
 
-__version__ = 0.1
+__version__ = 0.2
 
 
-class mpi_runner:
+class job(object):
     def __init__(self):
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
@@ -228,4 +228,87 @@ class mpi_runner:
 
 
 
+class job_v2(object):
+    def __init__(self):
+        self.subjobs = []
+        self.ds = None
+        self.comm = MPI.COMM_WORLD
+        self.rank = self.comm.Get_rank()
+        self.size = self.comm.Get_size()
+        self.maxEventsPerNode = 5000
+        self.maxEventsPerNode = 360
+        self.all_times = []
+        self.shared = {}
+        self.output = []
+        self.gathered_output = []
+        return
 
+    def set_datasource(self,exp=None,run=None):
+        self.exp = exp
+        self.run = run
+        self.ds = psana.DataSource('exp={:}:run={:0.0f}:idx'.format(exp,run))
+
+    def add_event_process(self,sj):
+        sj.set_parent(self)
+        self.subjobs.append(sj)
+
+    def gather_output(self):
+        gathered_output = self.comm.gather( self.output, root=0 )
+        if self.rank == 0:
+            for go in gathered_output:
+                self.gathered_output.extend( go )
+        return
+
+    def dojob(self): # the main loop
+        self.cpustart = time.time()
+        # assign reducer_rank for the subjobs (just cycle through the available nodes)
+        ranks = range(self.size)
+        for ii,sj in enumerate(self.subjobs):
+            sj.reducer_rank = ranks[ ii % len(ranks) ]
+
+
+        for sj in self.subjobs:
+            sj.beginJob()
+
+        for run in self.ds.runs():
+            times = run.times()
+            if self.rank == 0:
+                self.all_times.extend(times)
+            mylength = int(math.ceil(float(len(times))/self.size))
+            if mylength > self.maxEventsPerNode:
+                mylength = self.maxEventsPerNode
+            mytimes = times[self.rank*mylength:(self.rank+1)*mylength]
+
+            if mylength > len(mytimes):
+                mylength = len(mytimes)
+
+            for sj in self.subjobs:
+                sj.beginRun()
+
+            for ii in xrange(mylength):
+                evt = run.event(mytimes[ii])
+                if evt is None:
+                    print "**** event fetch failed ({:}) : rank {:}".format(mytimes[ii],self.rank)
+                    continue
+
+                for sj in self.subjobs:
+                    sj.event(evt)
+
+            for sj in self.subjobs:
+                sj.endRun()
+
+        for sj in self.subjobs:
+            sj.endJob()
+
+        self.gather_output()
+        if self.rank == 0:
+            make_report(self.gathered_output)
+
+        return
+
+
+def make_report(output):
+    #output is a list of dictionaries
+    # this function produces a txtfile python dictionary and an html page
+    print output
+    pass
