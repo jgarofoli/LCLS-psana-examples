@@ -349,6 +349,7 @@ class simple_trends(event_process.event_process_v2):
                 pylab.plot(thisxs,thismins,'b')
                 pylab.title(attr)
                 pylab.savefig('figure_trend_{:}.pdf'.format(attr))
+                # finish this section
         return
 
 class simple_stats(event_process.event_process_v2):

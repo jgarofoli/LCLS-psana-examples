@@ -38,6 +38,14 @@ gasdets_trends.set_stuff(
     )
 myMPIrunner.add_event_process(gasdets_trends)
 
+ebeam_trends = data_summary.simple_trends()
+ebeam_trends.set_stuff(
+    psana.Source('BldInfo(EBeam)'),
+    psana.Bld.BldDataEBeamV6,
+    ['ebeamCharge','ebeamPhotonEnergy'],
+    1.0
+    )
+myMPIrunner.add_event_process(ebeam_trends)
 
 acqiris = data_summary.acqiris() 
 acqiris.set_stuff( 
