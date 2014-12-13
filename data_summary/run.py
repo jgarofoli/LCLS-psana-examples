@@ -236,25 +236,68 @@ class job_v2(object):
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        self.maxEventsPerNode = 360
+        #self.maxEventsPerNode = 360
         self.all_times = []
         self.shared = {}
         self.output = []
+        self.output_dir = None
         self.gathered_output = []
+        self.previous_versions = []
+        self.start_time = time.time()
+        return
+
+    def smart_rename(self,out):
+        if out == './':
+            return
+        while out[-1] == '/':
+            out = out[:-1]
+        ii = 0
+        while True:
+            if not os.path.isdir(out+'.{:02.0f}'.format(ii)):
+                os.rename(out,out+'.{:02.0f}'.format(ii))
+                break
+            else:
+                self.previous_versions.append( [out+'.{:02.0f}'.format(ii),] )
+                if os.path.isdir(out+'.{:02.0f}'.format(ii)) and os.path.isfile( out+'.{:02.0f}'.format(ii) +'/report.html'):
+                    self.previous_versions[-1].append( time.ctime( os.path.getctime(  out+'.{:02.0f}'.format(ii) +'/report.html' ) ) )
+                else: 
+                    self.previous_versions[-1].append( None )
+                ii += 1
+                continue
+        return
+                     
+    def set_outputdir(self,*args):
+        if len(args) == 1:
+            self.output_dir = args[0]
+        if not os.path.isdir(self.output_dir) and self.rank==0:
+            os.mkdir(self.output_dir)
+        elif os.path.isdir(self.output_dir) and self.rank==0:
+            self.smart_rename(self.output_dir)
+            os.mkdir(self.output_dir)
+        time.sleep(1)
+        os.chdir(self.output_dir)
         return
 
     def set_datasource(self,exp=None,run=None):
         self.exp = exp
         self.run = run
         self.ds = psana.DataSource('exp={:}:run={:0.0f}:idx'.format(exp,run))
+        instr, thisexp = exp.split('/')
+        self.set_outputdir(os.path.join( os.path.abspath('.') ,'{:}_run{:0.0f}'.format(thisexp,run)))
+        print "output directory is", self.output_dir
+        return
 
     def add_event_process(self,sj):
         sj.set_parent(self)
         self.subjobs.append(sj)
 
+
+
     def gather_output(self):
         gathered_output = self.comm.gather( self.output, root=0 )
+        timing = self.comm.gather(self.cputotal, root=0)
         if self.rank == 0:
+            self.cpu_time = sum( timing )
             for go in gathered_output:
                 self.gathered_output.extend( go )
         return
@@ -297,18 +340,7 @@ class job_v2(object):
             for sj in self.subjobs:
                 sj.endRun()
 
+        self.cputotal = time.time() - self.cpustart
         for sj in self.subjobs:
             sj.endJob()
-
-        self.gather_output()
-        if self.rank == 0:
-            make_report(self.gathered_output)
-
         return
-
-
-def make_report(output):
-    #output is a list of dictionaries
-    # this function produces a txtfile python dictionary and an html page
-    print output
-    pass

@@ -3,7 +3,7 @@ from markup import oneliner as e
 import os
 import shutil
 
-html_ref_dir = '/reg/neh/home/justing/CXI/data_summary_html/'
+html_ref_dir = '/reg/neh/home/justing/CXI/DS/data_summary_html/'
 
 class report:
     def __init__(self,*args,**kwargs):
