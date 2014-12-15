@@ -13,7 +13,8 @@ myMPIrunner.set_maxEventsPerNode(500)
 myMPIrunner.add_event_process( data_summary.counter() )
 myMPIrunner.add_event_process( data_summary.evr() )
 myMPIrunner.add_event_process( data_summary.time_fiducials() )
-myMPIrunner.add_event_process( data_summary.get_available_data() )
+myMPIrunner.add_event_process( data_summary.add_available_data() )
+myMPIrunner.add_event_process( data_summary.add_elog() )
 
 ebeam = data_summary.simple_stats()
 ebeam.set_stuff(
@@ -69,6 +70,7 @@ acqiris.set_stuff(
 myMPIrunner.add_event_process( acqiris )
 
 
+myMPIrunner.add_event_process( data_summary.store_report_results() )
 myMPIrunner.add_event_process( data_summary.build_html() ) # this has to be last
 
 myMPIrunner.dojob()

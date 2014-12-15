@@ -295,13 +295,13 @@ class job_v2(object):
         sj.set_parent(self)
         self.subjobs.append(sj)
 
-
-
     def gather_output(self):
         gathered_output = self.comm.gather( self.output, root=0 )
         timing = self.comm.gather(self.cputotal, root=0)
         if self.rank == 0:
             self.cpu_time = sum( timing )
+            if len(self.gathered_output) != 0:
+                return
             for go in gathered_output:
                 self.gathered_output.extend( go )
         return

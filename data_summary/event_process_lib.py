@@ -254,7 +254,7 @@ class acqiris(event_process.event_process_v2):
             self.parent.output.append(self.output)
         return
 
-class get_available_data(event_process.event_process_v2):
+class add_available_data(event_process.event_process_v2):
     def __init__(self):
         self.event_keys = []
         return
@@ -269,6 +269,33 @@ class get_available_data(event_process.event_process_v2):
             self.output = {'in_report': 'meta', 'in_report_title':'Available Data Sources'}
             self.output['text'] = '<pre>' + pprint.pformat( self.event_keys )  + '</pre>'
             self.parent.output.append(self.output)
+        return
+
+class add_elog(event_process.event_process_v2):
+    def beginJob(self):
+        if self.parent.rank == self.reducer_rank:
+            self.expNum = self.parent.ds.env().expNum()
+        return
+
+    def endJob(self):
+        if self.parent.rank == self.reducer_rank:
+            self.output = {'in_report': 'meta', 'in_report_title':'Elog'}
+            self.output['text'] = "<a href=https://pswww.slac.stanford.edu/apps/portal/index.php?exper_id={:0.0f}>Elog</a>".format(self.expNum)
+            self.parent.output.append(self.output)
+        return
+
+class store_report_results(event_process.event_process_v2):
+    def endJob(self):
+        self.parent.gather_output()
+        if self.parent.rank == 0:
+            self.output = {'in_report': 'meta', 'in_report_title':'Report Results'}
+            self.output['text'] = "<a href=report.py>Report.py</a>"
+            self.parent.output.append(self.output)
+            self.parent.gathered_output.append(self.output)
+            outfile = open( os.path.join(self.parent.output_dir,'report.py'), 'w' )
+            outfile.write( 'report = ' )
+            outfile.write( pprint.pformat( self.parent.gathered_output ) )
+            outfile.close()
         return
 
 class build_html(event_process.event_process_v2):
@@ -380,7 +407,7 @@ class build_html(event_process.event_process_v2):
 
         return
     def make_report(self,gathered):
-        print gathered
+        #print gathered
         self.mk_output_html(gathered)
         return
 
