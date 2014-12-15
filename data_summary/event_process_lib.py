@@ -10,6 +10,7 @@ import numpy
 import psana
 
 from mpi4py import MPI
+import pprint
 
 #import code
 #code.interact(None,None,locals())
@@ -253,6 +254,23 @@ class acqiris(event_process.event_process_v2):
             self.parent.output.append(self.output)
         return
 
+class get_available_data(event_process.event_process_v2):
+    def __init__(self):
+        self.event_keys = []
+        return
+
+    def event(self,evt):
+        if self.parent.rank == self.reducer_rank and len(self.event_keys) == 0:
+            self.event_keys = evt.keys()
+        return
+
+    def endJob(self):
+        if self.parent.rank == self.reducer_rank:
+            self.output = {'in_report': 'meta', 'in_report_title':'Available Data Sources'}
+            self.output['text'] = '<pre>' + pprint.pformat( self.event_keys )  + '</pre>'
+            self.parent.output.append(self.output)
+        return
+
 class build_html(event_process.event_process_v2):
     def mk_output_html(self,gathered):
         if self.parent.rank != 0:
@@ -270,29 +288,43 @@ class build_html(event_process.event_process_v2):
                                                                                                                         #
         self.html.start_subblock('Data Information',id='datatime')  ##############################################      #
         self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:} seconds'.format(                   #      #
-            time.ctime( self.parent.all_times[0].seconds()) ,                                                           #      #
-            time.ctime(self.parent.all_times[-1].seconds()),                                                            #      #
-            self.parent.all_times[-1].seconds()-self.parent.all_times[0].seconds() ) )                                         #      #
+            time.ctime( self.parent.all_times[0].seconds()) ,                                                    #      #
+            time.ctime(self.parent.all_times[-1].seconds()),                                                     #      #
+            self.parent.all_times[-1].seconds()-self.parent.all_times[0].seconds() ) )                           #      #
         self.html.end_subblock()                                    ##############################################      #
                                                                                                                         #
                                                                                                                         #
         self.html.start_subblock('Processing Information', id='datainfo')      ###################################      #
         self.html.page.p('Report time: {:}'.format(time.ctime()))                                                #      #
         self.html.page.p('Total events processed: {:} of {:}'.format(                                            #      #
-            self.parent.shared['total_processed'], len(self.parent.all_times) ) )                                   #      #
-        self.html.page.p('Total processors: {:}'.format( self.parent.size ) )                                           #      #
-        self.html.page.p('Wall Time: {:0.1f} seconds'.format( time.time() - self.parent.start_time ) )                  #      #
+            self.parent.shared['total_processed'], len(self.parent.all_times) ) )                                #      #
+        self.html.page.p('Total processors: {:}'.format( self.parent.size ) )                                    #      #
+        self.html.page.p('Wall Time: {:0.1f} seconds'.format( time.time() - self.parent.start_time ) )           #      #
         self.html.page.p('CPU Time: {:0.1f} seconds (accuracy ~10%)'.format( self.parent.cpu_time ))             #      #
         #self.html.page.p( "CPU time for final step on rank {:} : {:0.1f} seconds".format(                       #      #
             #self.rank, self.finaltime))                                                                         #      #
         self.html.end_subblock()                                               ###################################      #
                                                                                                                         #
+        for thisep in sorted(gathered):                                                                                #
+            if thisep['in_report'] == 'meta':                                                                     #
+                ep = thisep['in_report_title'].replace(' ','_')
+                self.html.start_subblock(thisep['in_report_title'],id=ep)                ################# a sub block #########    #
+                if 'text' in thisep:
+                    self.html.page.p( thisep['text'] )
+                if 'table' in thisep:
+                    self.html.page.add( output_html.mk_table( thisep['table'] )() )                           #    #
+                if 'figures' in thisep:
+                    self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
+                    for img in sorted(thisep['figures']):                                               #     #    #
+                        self.html.page.img(src=os.path.basename(thisep['figures'][img]['png']),style='width:49%;')        #     #    #
+                    self.html.end_hidden()                                           ############################     #    #
+                self.html.end_subblock()                                    #######################################    #
                                                                                                                         #
         self.html.end_block()          ##################################################################################
 
         self.html.start_block('Detector Data', id="detectordata") ################################## a block ########### 
                                                                                                                        #
-        for thisep in sorted(gathered):                                                                        #
+        for thisep in sorted(gathered):                                                                                #
             if thisep['in_report'] == 'detectors':                                                                     #
                 ep = thisep['in_report_title'].replace(' ','_')
                 self.html.start_subblock(thisep['in_report_title'],id=ep)                ################# a sub block #########    #

@@ -1,13 +1,19 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import jutils
 import data_summary
 import psana
 
+
 myMPIrunner = data_summary.job_v2()
 myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
+myMPIrunner.set_maxEventsPerNode(500)
 
 myMPIrunner.add_event_process( data_summary.counter() )
 myMPIrunner.add_event_process( data_summary.evr() )
 myMPIrunner.add_event_process( data_summary.time_fiducials() )
+myMPIrunner.add_event_process( data_summary.get_available_data() )
 
 ebeam = data_summary.simple_stats()
 ebeam.set_stuff(

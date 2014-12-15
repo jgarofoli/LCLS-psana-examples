@@ -236,7 +236,7 @@ class job_v2(object):
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        #self.maxEventsPerNode = 360
+        self.maxEventsPerNode = 360
         self.all_times = []
         self.shared = {}
         self.output = []
@@ -278,6 +278,10 @@ class job_v2(object):
         os.chdir(self.output_dir)
         return
 
+    def set_maxEventsPerNode(self,n):
+        self.maxEventsPerNode = n
+        return
+
     def set_datasource(self,exp=None,run=None):
         self.exp = exp
         self.run = run
@@ -309,6 +313,7 @@ class job_v2(object):
         for ii,sj in enumerate(self.subjobs):
             sj.reducer_rank = ranks[ ii % len(ranks) ]
 
+        print "rank {:} processing {:} events".format(self.rank, self.maxEventsPerNode)
 
         for sj in self.subjobs:
             sj.beginJob()
