@@ -17,7 +17,7 @@ import pprint
 
 
 
-class counter(event_process.event_process_v2):
+class counter(event_process.event_process):
     def __init__(self ):
         self.data  = numpy.array([0,])
         self.mergeddata = numpy.array([0,]) 
@@ -37,7 +37,7 @@ class counter(event_process.event_process_v2):
             self.parent.shared['total_processed'] = self.mergeddata[0]
         return
 
-class evr(event_process.event_process_v2):
+class evr(event_process.event_process):
     def __init__(self):
         self.evr = []
         self.src = psana.Source('DetInfo(NoDetector.0:Evr.0)')
@@ -58,7 +58,7 @@ class evr(event_process.event_process_v2):
         self.parent.shared['evr'] = self.evr
         return
 
-class time_fiducials(event_process.event_process_v2):
+class time_fiducials(event_process.event_process):
     def __init__(self):
         self.timestamp = ()
         self.src = psana.EventId
@@ -77,7 +77,7 @@ class time_fiducials(event_process.event_process_v2):
         self.parent.shared['timestamp'] = self.timestamp
         return
 
-class simple_trends(event_process.event_process_v2):
+class simple_trends(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
@@ -134,7 +134,7 @@ class simple_trends(event_process.event_process_v2):
             self.parent.output.append(self.output)
         return
 
-class simple_stats(event_process.event_process_v2):
+class simple_stats(event_process.event_process):
     def set_stuff(self,psana_src,psana_device,device_attrs,hist_ranges,in_report=None,in_report_title=None):
         self.src         = psana.Source(psana_src)
         self.dev         = psana_device
@@ -194,7 +194,7 @@ class simple_stats(event_process.event_process_v2):
         return
 
 
-class acqiris(event_process.event_process_v2):
+class acqiris(event_process.event_process):
     def __init__(self):
         self.data = {}
         self.output = {}
@@ -254,7 +254,7 @@ class acqiris(event_process.event_process_v2):
             self.parent.output.append(self.output)
         return
 
-class add_available_data(event_process.event_process_v2):
+class add_available_data(event_process.event_process):
     def __init__(self):
         self.event_keys = []
         return
@@ -271,7 +271,7 @@ class add_available_data(event_process.event_process_v2):
             self.parent.output.append(self.output)
         return
 
-class add_elog(event_process.event_process_v2):
+class add_elog(event_process.event_process):
     def beginJob(self):
         if self.parent.rank == self.reducer_rank:
             self.expNum = self.parent.ds.env().expNum()
@@ -284,7 +284,7 @@ class add_elog(event_process.event_process_v2):
             self.parent.output.append(self.output)
         return
 
-class store_report_results(event_process.event_process_v2):
+class store_report_results(event_process.event_process):
     def endJob(self):
         self.parent.gather_output()
         if self.parent.rank == 0:
@@ -298,7 +298,7 @@ class store_report_results(event_process.event_process_v2):
             outfile.close()
         return
 
-class build_html(event_process.event_process_v2):
+class build_html(event_process.event_process):
     def mk_output_html(self,gathered):
         if self.parent.rank != 0:
             print "mk_output_html rank {:} exiting".format(self.parent.rank)
