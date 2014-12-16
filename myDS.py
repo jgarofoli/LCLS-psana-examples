@@ -7,6 +7,7 @@ import psana
 
 """
 $> mpirun -n 4 python myDS.py
+$> bsub -a mympi -n 24 -o mpi.log -q psanaq python myDS.py
 """
 
 
@@ -72,6 +73,12 @@ acqiris.set_stuff(
     in_report_title='Acqiris Stats'
         )
 myMPIrunner.add_event_process( acqiris )
+
+myepics_trend = data_summary.epics_trend()
+myepics_trend.add_pv_trend('CXI:USR:MMS:07.RBV')
+myepics_trend.output['in_report'] = 'detectors'
+myepics_trend.output['in_report_title'] = 'Epics Trends'
+myMPIrunner.add_event_process( myepics_trend )
 
 
 myMPIrunner.add_event_process( data_summary.store_report_results() )

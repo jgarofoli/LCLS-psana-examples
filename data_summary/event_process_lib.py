@@ -17,7 +17,72 @@ import pprint
 #code.interact(None,None,locals())
 #logger = logging.getLogger('data_summary.event_process_lib')
 
+class epics_trend(event_process.event_process):
+    def __init__(self):
+        self.logger = logging.getLogger('data_summary.event_process_lib.epics_trend')
+        self.output = {}
+        self.reducer_rank = 0
+        self.period_window = 1.
+        self.channels_to_trend = []
+        self.output['in_report'] = None
+        self.output['in_report_title'] = None
 
+    def beginJob(self):
+        self.epics = self.parent.ds.env().epicsStore()
+        self.allPvs = self.epics.names()
+        self.trends = {}
+        for chan in self.channels_to_trend:
+            self.trends[chan] = toolbox.mytrend(self.period_window)
+        return
+
+    def add_pv_trend(self,chan):
+        if chan not in self.channels_to_trend:
+            self.channels_to_trend.append(chan)
+        return
+
+    def event(self,evt):
+        this_ts = self.parent.shared['timestamp'][0] + self.parent.shared['timestamp'][1]/1.0e9
+        for chan in self.channels_to_trend:
+            val = self.epics.value(chan)     
+            self.trends[chan].add_entry( this_ts, val )
+        return
+
+
+    def endJob(self):
+        self.reduced_trends = {}
+        for chan in self.channels_to_trend:
+            self.reduced_trends[chan] = self.trends[chan].reduce(self.parent.comm,self.reducer_rank)
+
+        if self.parent.rank == self.reducer_rank:
+            self.output['figures'] = {}
+            self.output['table'] = {}
+            self.output['text'] = []
+            self.output['text'].append('All available PVs in the EPICS store: <select><option>--</option>\n')
+            for chan in self.allPvs:
+                self.output['text'][-1] += '<option>{:}</option>\n'.format(chan)
+            self.output['text'][-1] += '</select>\n'
+            self.output['text'].append('PVs trended below the fold: <br/>\n<pre>')
+            for chan in self.channels_to_trend:
+                self.output['text'][-1] += chan+'\n'
+            self.output['text'][-1] += '</pre>'
+            fig = pylab.figure()
+            for chan in self.channels_to_trend:
+                self.output['figures'][chan] = {}
+                fig.clear()
+                thisxs    = self.reduced_trends[chan].getxs()
+                thismeans = self.reduced_trends[chan].getmeans()
+                thismins = self.reduced_trends[ chan].getmins()
+                thismaxs = self.reduced_trends[ chan].getmaxs()
+                pylab.plot(thisxs,thismeans,'k')
+                pylab.plot(thisxs,thismaxs,'r')
+                pylab.plot(thisxs,thismins,'b')
+                pylab.title(chan)
+                pylab.savefig( os.path.join( self.parent.output_dir, 'figure_trend_{:}.png'.format(chan.replace(':','_')) ))
+                self.output['figures'][chan]['png'] = os.path.join( self.parent.output_dir, 'figure_trend_{:}.png'.format( chan.replace(':','_') ))
+                # finish this section
+            del fig
+            self.parent.output.append(self.output)
+        return
 
 class counter(event_process.event_process):
     def __init__(self ):
@@ -321,6 +386,10 @@ class store_report_results(event_process.event_process):
             outfile.close()
         return
 
+
+
+
+
 class build_html(event_process.event_process):
     def __init__(self):
         self.output = {}
@@ -328,10 +397,27 @@ class build_html(event_process.event_process):
         self.logger = logging.getLogger('data_summary.event_process_lib.build_html')
         return
 
+    def getsize(self,start_path = '.'):
+        tt = 0
+        nn = 0
+        run = 'r{:04.0f}'.format(self.parent.run)
+        for dirpath, dirnames, filenames in os.walk(start_path):
+            for f in filenames:
+                if 'xtc' in f.lower() and run in f.lower():
+                    fp = os.path.join(dirpath,f)
+                    tt += os.path.getsize(fp)
+                    nn += 1
+        return nn, tt
+
     def mk_output_html(self,gathered):
         if self.parent.rank != 0:
             self.logger.info( "mk_output_html rank {:} exiting".format(self.parent.rank) )
             return
+
+        instr, exp = self.parent.exp.split('/')
+        thisdir = os.path.join( '/reg/d/psdm/',instr.lower(),exp.lower(),'xtc')
+        self.logger.info( "counting files in {:}".format(thisdir) )
+        nfile, nbytes = self.getsize(start_path=thisdir)
 
         self.logger.info( "mk_output_html rank {:} continuing".format(self.parent.rank) )
         self.html = output_html.report(  self.parent.exp, self.parent.run, 
@@ -347,6 +433,7 @@ class build_html(event_process.event_process):
             time.ctime( self.parent.all_times[0].seconds()) ,                                                    #      #
             time.ctime(self.parent.all_times[-1].seconds()),                                                     #      #
             self.parent.all_times[-1].seconds()-self.parent.all_times[0].seconds() ) )                           #      #
+        self.html.page.p('Total files: {:}<br/>Total bytes: {:} ({:0.1f} GB)<br/>'.format(nfile,nbytes,nbytes/(1024.**3)))
         self.html.end_subblock()                                    ##############################################      #
                                                                                                                         #
                                                                                                                         #
@@ -366,7 +453,11 @@ class build_html(event_process.event_process):
                 ep = thisep['in_report_title'].replace(' ','_')
                 self.html.start_subblock(thisep['in_report_title'],id=ep)                ################# a sub block #########    #
                 if 'text' in thisep:
-                    self.html.page.p( thisep['text'] )
+                    if isinstance(thisep['text'],list):
+                        for p in thisep['text']:
+                            self.html.page.p( p )
+                    else:
+                        self.html.page.p( thisep['text'] )
                 if 'table' in thisep:
                     self.html.page.add( output_html.mk_table( thisep['table'] )() )                           #    #
                 if 'figures' in thisep:
@@ -384,12 +475,19 @@ class build_html(event_process.event_process):
             if thisep['in_report'] == 'detectors':                                                                     #
                 ep = thisep['in_report_title'].replace(' ','_')
                 self.html.start_subblock(thisep['in_report_title'],id=ep)                ################# a sub block #########    #
+                if 'text' in thisep:
+                    if isinstance(thisep['text'],list):
+                        for p in thisep['text']:
+                            self.html.page.p( p )
+                    else:
+                        self.html.page.p( thisep['text'] )
                 if 'table' in thisep:
                     self.html.page.add( output_html.mk_table( thisep['table'] )() )                           #    #
-                self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
-                for img in sorted(thisep['figures']):                                               #     #    #
-                    self.html.page.img(src=os.path.basename(thisep['figures'][img]['png']),style='width:49%;')        #     #    #
-                self.html.end_hidden()                                           ############################     #    #
+                if 'figures' in thisep:
+                    self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
+                    for img in sorted(thisep['figures']):                                               #     #    #
+                        self.html.page.img(src=os.path.basename(thisep['figures'][img]['png']),style='width:49%;')        #     #    #
+                    self.html.end_hidden()                                           ############################     #    #
                 self.html.end_subblock()                                    #######################################    #
                                                                                                                        #
                                                                                                                        #
@@ -401,6 +499,8 @@ class build_html(event_process.event_process):
 
         self.html.start_block('Logging', id='logging')   ######################################## a block #############
         self.html.page.p('link to LSF log file.')                                                                     #
+        logs = ','.join(['<a href="log_{0:}.log">log {0:}</a> '.format(x) for x in xrange(self.parent.size) ])
+        self.html.page.p('Subjob log files: {:}'.format(logs) )
         if len(self.parent.previous_versions) > 0:                                                                           #
             self.html.start_subblock('Previous Versions',id='prevver') ###################### a sub block ########    #
             self.html.start_hidden('prevver')                             ############## hidden part ####        #    #
