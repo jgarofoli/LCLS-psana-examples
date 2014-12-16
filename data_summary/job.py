@@ -25,6 +25,7 @@ class job(object):
         self.gathered_output = []
         self.previous_versions = []
         self.start_time = time.time()
+        self.logger = logging.getLogger('data_summary.job.r{:0.0f}'.format( self.rank ))
         return
 
     def smart_rename(self,out):
@@ -57,6 +58,11 @@ class job(object):
             os.mkdir(self.output_dir)
         time.sleep(1)
         os.chdir(self.output_dir)
+        self.logger_fh = logging.FileHandler('log_{:0.0f}.log'.format(self.rank))
+        self.logger_fh.setLevel(logging.DEBUG)
+        self.logger_fh.setFormatter( logging.Formatter( '%(asctime)s - %(name)s - %(levelname)s - %(message)s' ) )
+        self.logger.addHandler( self.logger_fh )
+        self.logger.debug( "output directory is "+self.output_dir )
         return
 
     def set_maxEventsPerNode(self,n):
@@ -66,14 +72,18 @@ class job(object):
     def set_datasource(self,exp=None,run=None):
         self.exp = exp
         self.run = run
-        self.ds = psana.DataSource('exp={:}:run={:0.0f}:idx'.format(exp,run))
         instr, thisexp = exp.split('/')
         self.set_outputdir(os.path.join( os.path.abspath('.') ,'{:}_run{:0.0f}'.format(thisexp,run)))
-        print "output directory is", self.output_dir
+
+        self.ds = psana.DataSource('exp={:}:run={:0.0f}:idx'.format(exp,run))
+
         return
 
     def add_event_process(self,sj):
         sj.set_parent(self)
+        
+        sj.logger = logging.getLogger( self.logger.name + '.' + sj.logger.name.split('.')[-1] )
+        #sj.logger.addHandler(self.logger_fh)
         self.subjobs.append(sj)
 
     def gather_output(self):
@@ -89,12 +99,12 @@ class job(object):
 
     def dojob(self): # the main loop
         self.cpustart = time.time()
+        self.logger.info( "rank {:} starting" )
         # assign reducer_rank for the subjobs (just cycle through the available nodes)
         ranks = range(self.size)
         for ii,sj in enumerate(self.subjobs):
             sj.reducer_rank = ranks[ ii % len(ranks) ]
 
-        print "rank {:} processing {:} events".format(self.rank, self.maxEventsPerNode)
 
         for sj in self.subjobs:
             sj.beginJob()
@@ -117,7 +127,7 @@ class job(object):
             for ii in xrange(mylength):
                 evt = run.event(mytimes[ii])
                 if evt is None:
-                    print "**** event fetch failed ({:}) : rank {:}".format(mytimes[ii],self.rank)
+                    self.logger.ERROR( "**** event fetch failed ({:}) : rank {:}".format(mytimes[ii],self.rank) )
                     continue
 
                 for sj in self.subjobs:
@@ -126,7 +136,9 @@ class job(object):
             for sj in self.subjobs:
                 sj.endRun()
 
+        self.logger.info( "rank {:} finishing" )
         self.cputotal = time.time() - self.cpustart
         for sj in self.subjobs:
             sj.endJob()
+
         return

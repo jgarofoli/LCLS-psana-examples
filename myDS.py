@@ -5,6 +5,10 @@ import jutils
 import data_summary
 import psana
 
+"""
+$> mpirun -n 4 python myDS.py
+"""
+
 
 myMPIrunner = data_summary.job()
 myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)

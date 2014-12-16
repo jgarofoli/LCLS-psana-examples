@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 
 import event_process
 import output_html
@@ -14,6 +15,7 @@ import pprint
 
 #import code
 #code.interact(None,None,locals())
+#logger = logging.getLogger('data_summary.event_process_lib')
 
 
 
@@ -21,6 +23,7 @@ class counter(event_process.event_process):
     def __init__(self ):
         self.data  = numpy.array([0,])
         self.mergeddata = numpy.array([0,]) 
+        self.logger = logging.getLogger('data_summary.event_process_lib.counter')
         return
 
     def event(self,evt):
@@ -31,9 +34,9 @@ class counter(event_process.event_process):
 
     def endJob(self):
         self.parent.comm.Reduce([self.data, MPI.DOUBLE], [self.mergeddata, MPI.DOUBLE],op=MPI.SUM,root=self.reducer_rank)
-        print "rank {:} events processed: {:}".format(self.parent.rank,self.data[0])
+        self.logger.info( "rank {:} events processed: {:}".format(self.parent.rank,self.data[0]) )
         if self.parent.rank == 0: #self.reducer_rank:
-            print "total events processed: {:}".format(self.mergeddata[0])
+            self.logger.info( "total events processed: {:}".format(self.mergeddata[0]) )
             self.parent.shared['total_processed'] = self.mergeddata[0]
         return
 
@@ -41,6 +44,7 @@ class evr(event_process.event_process):
     def __init__(self):
         self.evr = []
         self.src = psana.Source('DetInfo(NoDetector.0:Evr.0)')
+        self.logger = logging.getLogger('data_summary.event_process_lib.evr')
         return
 
     def beginJob(self):
@@ -62,6 +66,7 @@ class time_fiducials(event_process.event_process):
     def __init__(self):
         self.timestamp = ()
         self.src = psana.EventId
+        self.logger = logging.getLogger('data_summary.event_process_lib.time_fiducials')
 
     def beginJob(self):
         self.parent.timestamp = self.timestamp
@@ -81,6 +86,7 @@ class simple_trends(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
+        self.logger = logging.getLogger('data_summary.event_process_lib.simple_trends')
         return
 
     def set_stuff(self,psana_src,psana_device,device_attrs,period_window,in_report=None,in_report_title=None):
@@ -144,6 +150,7 @@ class simple_stats(event_process.event_process):
         self.hist_ranges = hist_ranges  # must be a dict of the same length as dev_attrs
         self.output['in_report'] = in_report
         self.output['in_report_title'] = in_report_title
+        self.logger = logging.getLogger('data_summary.event_process_lib.simple_stats')
 
     def beginJob(self):
         self.histograms = {}
@@ -198,6 +205,7 @@ class acqiris(event_process.event_process):
     def __init__(self):
         self.data = {}
         self.output = {}
+        self.logger = logging.getLogger('data_summary.event_process_lib.acqiris')
         return
 
     def set_stuff(self,src,in_report=None,in_report_title=None):
@@ -232,7 +240,7 @@ class acqiris(event_process.event_process):
                 fig.clear()
                 #newdata = numpy.array( self.reduced_data[evr] )
                 newdata = self.reduced_data[evr]
-                print "{:} mean: {:0.2f}, std: {:0.2f}, min {:0.2f}, max {:0.2f}".format( evr, newdata.mean(), newdata.std(), newdata.minval, newdata.maxval )
+                self.logger.info( "{:} mean: {:0.2f}, std: {:0.2f}, min {:0.2f}, max {:0.2f}".format( evr, newdata.mean(), newdata.std(), newdata.minval, newdata.maxval ) )
                 self.output['table'][evr] = {}
                 self.output['table'][evr]['Mean Arrival Bin'] = newdata.mean()
                 self.output['table'][evr]['RMS'] = newdata.std()
@@ -256,7 +264,10 @@ class acqiris(event_process.event_process):
 
 class add_available_data(event_process.event_process):
     def __init__(self):
+        self.output = {}
+        self.reducer_rank = 0
         self.event_keys = []
+        self.logger = logging.getLogger('data_summary.event_process_lib.add_available_data')
         return
 
     def event(self,evt):
@@ -272,6 +283,12 @@ class add_available_data(event_process.event_process):
         return
 
 class add_elog(event_process.event_process):
+    def __init__(self):
+        self.output = {}
+        self.reducer_rank = 0
+        self.logger = logging.getLogger('data_summary.event_process_lib.add_available_data')
+        return
+    
     def beginJob(self):
         if self.parent.rank == self.reducer_rank:
             self.expNum = self.parent.ds.env().expNum()
@@ -285,6 +302,12 @@ class add_elog(event_process.event_process):
         return
 
 class store_report_results(event_process.event_process):
+    def __init__(self):
+        self.output = {}
+        self.reducer_rank = 0
+        self.logger = logging.getLogger('data_summary.event_process_lib.store_report_results')
+        return
+
     def endJob(self):
         self.parent.gather_output()
         if self.parent.rank == 0:
@@ -299,12 +322,18 @@ class store_report_results(event_process.event_process):
         return
 
 class build_html(event_process.event_process):
+    def __init__(self):
+        self.output = {}
+        self.reducer_rank = 0
+        self.logger = logging.getLogger('data_summary.event_process_lib.build_html')
+        return
+
     def mk_output_html(self,gathered):
         if self.parent.rank != 0:
-            print "mk_output_html rank {:} exiting".format(self.parent.rank)
+            self.logger.info( "mk_output_html rank {:} exiting".format(self.parent.rank) )
             return
 
-        print "mk_output_html rank {:} continuing".format(self.parent.rank)
+        self.logger.info( "mk_output_html rank {:} continuing".format(self.parent.rank) )
         self.html = output_html.report(  self.parent.exp, self.parent.run, 
             title='{:} Run {:}'.format(self.parent.exp,self.parent.run),
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
@@ -401,9 +430,9 @@ class build_html(event_process.event_process):
 
         self.html._finish_page()
 
-        print "mk_output_html rank {:} outputing file...".format(self.parent.rank)
+        self.logger.info( "mk_output_html rank {:} outputing file...".format(self.parent.rank) )
         self.html.myprint(tofile=True)
-        print "mk_output_html rank {:} outputing file... finished".format(self.parent.rank)
+        self.logger.info( "mk_output_html rank {:} outputing file... finished".format(self.parent.rank) )
 
         return
     def make_report(self,gathered):
