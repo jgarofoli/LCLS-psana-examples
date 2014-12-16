@@ -17,7 +17,6 @@ class job(object):
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.maxEventsPerNode = 5000
-        self.maxEventsPerNode = 360
         self.all_times = []
         self.shared = {}
         self.output = []
@@ -99,7 +98,7 @@ class job(object):
 
     def dojob(self): # the main loop
         self.cpustart = time.time()
-        self.logger.info( "rank {:} starting" )
+        self.logger.info( "rank {:} starting".format( self.rank ) )
         # assign reducer_rank for the subjobs (just cycle through the available nodes)
         ranks = range(self.size)
         for ii,sj in enumerate(self.subjobs):
@@ -136,7 +135,7 @@ class job(object):
             for sj in self.subjobs:
                 sj.endRun()
 
-        self.logger.info( "rank {:} finishing" )
+        self.logger.info( "rank {:} finishing".format( self.rank ) )
         self.cputotal = time.time() - self.cpustart
         for sj in self.subjobs:
             sj.endJob()
