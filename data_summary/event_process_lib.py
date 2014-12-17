@@ -273,10 +273,12 @@ class acqiris(event_process.event_process):
         self.logger = logging.getLogger('data_summary.event_process_lib.acqiris')
         return
 
-    def set_stuff(self,src,in_report=None,in_report_title=None):
+    def set_stuff(self,src,in_report=None,in_report_title=None,histmin=400,histmax=450):
         self.src = psana.Source(src)
         self.output['in_report'] = in_report
         self.output['in_report_title'] = in_report_title
+        self.histmin = histmin
+        self.histmax = histmax
         return
 
     def event(self,evt):
@@ -317,7 +319,7 @@ class acqiris(event_process.event_process):
                 newX, newY = self.reduced_data[evr].mksteps()
                 hh = pylab.fill_between( newX, 0, newY[:-1] )
                 pylab.title( 'evr '+repr(evr) )
-                pylab.xlim(0,100)
+                pylab.xlim(self.histmin,self.histmax)
                 pylab.ylim( 0 , max(self.reduced_data[evr].binentries)*1.1 )
                 #pylab.savefig( os.path.join( self.parent.output_dir, 'figure_evr_{:}.pdf'.format( evr ) ) )
                 #self.output['figures'][evr]['pdf'] = os.path.join( self.parent.output_dir, 'figure_evr_{:}.pdf'.format( evr ) )
@@ -332,18 +334,23 @@ class add_available_data(event_process.event_process):
         self.output = {}
         self.reducer_rank = 0
         self.event_keys = []
+        self.config_keys = []
         self.logger = logging.getLogger('data_summary.event_process_lib.add_available_data')
         return
 
     def event(self,evt):
         if self.parent.rank == self.reducer_rank and len(self.event_keys) == 0:
             self.event_keys = evt.keys()
+        if self.parent.rank == self.reducer_rank and len(self.config_keys) == 0:
+            self.config_keys = self.parent.ds.env().configStore().keys()
         return
 
     def endJob(self):
         if self.parent.rank == self.reducer_rank:
             self.output = {'in_report': 'meta', 'in_report_title':'Available Data Sources'}
-            self.output['text'] = '<pre>' + pprint.pformat( self.event_keys )  + '</pre>'
+            self.output['text'] = []
+            self.output['text'].append('Event Keys:<br/>\n<pre>' + pprint.pformat( self.event_keys )  + '</pre>')
+            self.output['text'].append('Config Keys:<br/>\n<pre>' + pprint.pformat( self.config_keys )  + '</pre>')
             self.parent.output.append(self.output)
         return
 

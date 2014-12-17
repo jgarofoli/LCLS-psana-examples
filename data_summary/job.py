@@ -36,6 +36,11 @@ class job(object):
         while True:
             if not os.path.isdir(out+'.{:02.0f}'.format(ii)):
                 os.rename(out,out+'.{:02.0f}'.format(ii))
+                self.previous_versions.append( [out+'.{:02.0f}'.format(ii),] )
+                if os.path.isdir(out+'.{:02.0f}'.format(ii)) and os.path.isfile( out+'.{:02.0f}'.format(ii) +'/report.html'):
+                    self.previous_versions[-1].append( time.ctime( os.path.getctime(  out+'.{:02.0f}'.format(ii) +'/report.html' ) ) )
+                else: 
+                    self.previous_versions[-1].append( None )
                 break
             else:
                 self.previous_versions.append( [out+'.{:02.0f}'.format(ii),] )

@@ -42,7 +42,8 @@ class trend_bin(object):
             self.sum1 += val
             self.sum2 += val**2.0
             self.avg   = (self.n - weight)/self.n * self.avg + weight/self.n * val
-            self.std   = math.sqrt(self.n*self.sum2 - self.sum1**2 ) / self.n
+            #print self.n, self.sum1, self.sum2
+            self.std   = math.sqrt( round(self.n*self.sum2 - self.sum1**2.0,9) ) / self.n
             if val < self.minval:
                 self.minval = val
             if val > self.maxval:

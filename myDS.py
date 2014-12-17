@@ -12,7 +12,8 @@ $> bsub -a mympi -n 24 -o mpi.log -q psanaq python myDS.py
 
 
 myMPIrunner = data_summary.job()
-myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
+#myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
+myMPIrunner.set_datasource(exp='CXI/cxif7214',run=124)
 myMPIrunner.set_maxEventsPerNode(500)
 
 myMPIrunner.add_event_process( data_summary.counter() )
@@ -70,12 +71,15 @@ acqiris = data_summary.acqiris()
 acqiris.set_stuff( 
     'DetInfo(CxiEndstation.0:Acqiris.0)',
     in_report='detectors',
-    in_report_title='Acqiris Stats'
+    in_report_title='Acqiris Stats',
+    histmin = 400,
+    histmax = 450
         )
 myMPIrunner.add_event_process( acqiris )
 
 myepics_trend = data_summary.epics_trend()
 myepics_trend.add_pv_trend('CXI:USR:MMS:07.RBV')
+myepics_trend.add_pv_trend('CXI:D50:MPD:CH:0:GetCurrentMeasurement')
 myepics_trend.output['in_report'] = 'detectors'
 myepics_trend.output['in_report_title'] = 'Epics Trends'
 myMPIrunner.add_event_process( myepics_trend )
