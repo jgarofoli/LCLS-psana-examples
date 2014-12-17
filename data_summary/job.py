@@ -129,13 +129,13 @@ class job(object):
                 sj.beginRun()
 
             for ii in xrange(mylength):
-                evt = run.event(mytimes[ii])
-                if evt is None:
+                self.evt = run.event(mytimes[ii])
+                if self.evt is None:
                     self.logger.ERROR( "**** event fetch failed ({:}) : rank {:}".format(mytimes[ii],self.rank) )
                     continue
 
                 for sj in self.subjobs:
-                    sj.event(evt)
+                    sj.event(self.evt)
 
             for sj in self.subjobs:
                 sj.endRun()

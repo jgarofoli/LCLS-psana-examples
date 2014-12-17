@@ -118,11 +118,11 @@ class evr(event_process.event_process):
         return
 
     def event(self,evt):
-        evr = evt.get(psana.EvrData.DataV3, self.src)
-        if evr is None:
+        self.raw_evr = evt.get(psana.EvrData.DataV3, self.src)
+        if self.raw_evr is None:
             self.evr = []
         else:
-            self.evr = [ff.eventCode() for ff in evr.fifoEvents()]
+            self.evr = [ff.eventCode() for ff in self.raw_evr.fifoEvents()]
 
         self.parent.shared['evr'] = self.evr
         return
@@ -170,12 +170,12 @@ class simple_trends(event_process.event_process):
         return
 
     def event(self, evt):
-        gas = evt.get(self.dev,self.src)
-        if gas is None:
+        self.gas = evt.get(self.dev,self.src)
+        if self.gas is None:
             return
         this_ts = self.parent.shared['timestamp'][0] + self.parent.shared['timestamp'][1]/1.0e9
         for attr in self.dev_attrs:
-            val = getattr(gas,attr)()     
+            val = getattr(self.gas,attr)()     
             self.trends[attr].add_entry( this_ts, val )
 
     def endJob(self):
@@ -225,13 +225,13 @@ class simple_stats(event_process.event_process):
 
 
     def event(self,evt):
-        gas = evt.get(self.dev,self.src)
-        if gas is None:
+        self.gas = evt.get(self.dev,self.src)
+        if self.gas is None:
             return
         for attr in self.dev_attrs:
-            val = getattr(gas,attr)()
+            val = getattr(self.gas,attr)()
             #print attr, val
-            self.histograms[attr].fill( getattr(gas,attr)() )
+            self.histograms[attr].fill( getattr(self.gas,attr)() )
 
     def endJob(self):
         self.reduced_histograms = {}
@@ -282,14 +282,14 @@ class acqiris(event_process.event_process):
         return
 
     def event(self,evt):
-        traces = evt.get(psana.Acqiris.DataDescV1,self.src)
-        if traces is None:
+        self.raw_traces = evt.get(psana.Acqiris.DataDescV1,self.src)
+        if self.raw_traces is None:
             return
-        trace = list(traces.data(5).waveforms()[0])
-        peak = trace.index( max(trace) )
+        self.trace = list(self.raw_traces.data(5).waveforms()[0])
+        self.peak = self.trace.index( max(self.trace) )
         for evr in self.parent.shared['evr']:
             #print "rank {:} evr {:} peak {:}".format(self.parent.rank, evr, peak )
-            self.data.setdefault( evr, toolbox.myhist(500,0,500)).fill( peak )
+            self.data.setdefault( evr, toolbox.myhist(500,0,500)).fill( self.peak )
         return
 
     def endJob(self):
