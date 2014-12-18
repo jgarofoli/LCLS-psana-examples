@@ -66,7 +66,7 @@ class job(object):
         self.logger_fh.setLevel(logging.DEBUG)
         self.logger_fh.setFormatter( logging.Formatter( '%(asctime)s - %(name)s - %(levelname)s - %(message)s' ) )
         self.logger.addHandler( self.logger_fh )
-        self.logger.debug( "output directory is "+self.output_dir )
+        self.logger.info( "output directory is "+self.output_dir )
         return
 
     def set_maxEventsPerNode(self,n):
@@ -80,6 +80,7 @@ class job(object):
         self.set_outputdir(os.path.join( os.path.abspath('.') ,'{:}_run{:0.0f}'.format(thisexp,run)))
 
         self.ds = psana.DataSource('exp={:}:run={:0.0f}:idx'.format(exp,run))
+        self.logger.info('preparing to analyze {:} run {:}'.format(exp,run))
 
         return
 

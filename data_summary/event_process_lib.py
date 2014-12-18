@@ -19,18 +19,18 @@ import pprint
 
 class epics_trend(event_process.event_process):
     def __init__(self):
-        self.logger = logging.getLogger('data_summary.event_process_lib.epics_trend')
-        self.output = {}
-        self.reducer_rank = 0
-        self.period_window = 1.
-        self.channels_to_trend = []
-        self.output['in_report'] = None
-        self.output['in_report_title'] = None
+        self.logger                      = logging.getLogger('data_summary.event_process_lib.epics_trend')
+        self.output                      = {}
+        self.reducer_rank                = 0
+        self.period_window               = 1.
+        self.channels_to_trend           = []
+        self.output['in_report']         = None
+        self.output['in_report_title']   = None
 
     def beginJob(self):
-        self.epics = self.parent.ds.env().epicsStore()
-        self.allPvs = self.epics.names()
-        self.trends = {}
+        self.epics       = self.parent.ds.env().epicsStore()
+        self.allPvs      = self.epics.names()
+        self.trends      = {}
         for chan in self.channels_to_trend:
             self.trends[chan] = toolbox.mytrend(self.period_window)
         return
@@ -54,17 +54,17 @@ class epics_trend(event_process.event_process):
             self.reduced_trends[chan] = self.trends[chan].reduce(self.parent.comm,self.reducer_rank)
 
         if self.parent.rank == self.reducer_rank:
-            self.output['figures'] = {}
-            self.output['table'] = {}
-            self.output['text'] = []
+            self.output['figures']   = {}
+            self.output['table']     = {}
+            self.output['text']      = []
             self.output['text'].append('All available PVs in the EPICS store: <select><option>--</option>\n')
             for chan in self.allPvs:
                 self.output['text'][-1] += '<option>{:}</option>\n'.format(chan)
-            self.output['text'][-1] += '</select>\n'
+            self.output['text'][-1]     += '</select>\n'
             self.output['text'].append('PVs trended below the fold: <br/>\n<pre>')
             for chan in self.channels_to_trend:
                 self.output['text'][-1] += chan+'\n'
-            self.output['text'][-1] += '</pre>'
+            self.output['text'][-1]     += '</pre>'
             fig = pylab.figure()
             for chan in self.channels_to_trend:
                 self.output['figures'][chan] = {}
