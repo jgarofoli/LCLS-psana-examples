@@ -25,6 +25,7 @@ class job(object):
         self.previous_versions = []
         self.start_time = time.time()
         self.logger = logging.getLogger('data_summary.job.r{:0.0f}'.format( self.rank ))
+        self.eventN = 0
         return
 
     def smart_rename(self,out):
@@ -131,6 +132,7 @@ class job(object):
 
             for ii in xrange(mylength):
                 self.evt = run.event(mytimes[ii])
+                self.eventN = ii
                 if self.evt is None:
                     self.logger.ERROR( "**** event fetch failed ({:}) : rank {:}".format(mytimes[ii],self.rank) )
                     continue

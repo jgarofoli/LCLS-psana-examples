@@ -10,10 +10,11 @@ $> mpirun -n 4 python myDS.py
 $> bsub -a mympi -n 24 -o mpi.log -q psanaq python myDS.py
 """
 
+data_summary.set_logger_level('INFO') # choose one of DEBUG INFO WARNING ERROR CRITICAL
 
 myMPIrunner = data_summary.job()
 #myMPIrunner.set_datasource(exp='CXI/cxif7214',run=205)
-myMPIrunner.set_datasource(exp='CXI/cxif7214',run=124)
+myMPIrunner.set_datasource(exp='CXI/cxie9214',run=63)
 myMPIrunner.set_maxEventsPerNode(500)
 
 myMPIrunner.add_event_process( data_summary.counter() )
@@ -75,7 +76,7 @@ acqiris.set_stuff(
     histmin = 400,
     histmax = 450
         )
-myMPIrunner.add_event_process( acqiris )
+#myMPIrunner.add_event_process( acqiris )
 
 myepics_trend = data_summary.epics_trend()
 myepics_trend.add_pv_trend('CXI:USR:MMS:07.RBV')

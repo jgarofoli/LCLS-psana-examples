@@ -31,6 +31,15 @@ class epics_trend(event_process.event_process):
         self.epics       = self.parent.ds.env().epicsStore()
         self.allPvs      = self.epics.names()
         self.trends      = {}
+        self.chans_to_remove = []
+        for chan in self.channels_to_trend:
+            if chan not in self.allPvs:
+                self.logger.warning('channel {:} not in PV list, removing from trending'.format(chan))
+                self.chans_to_remove.append(chan)
+
+        for chan in self.chans_to_remove:
+            self.channels_to_trend.remove(chan)
+
         for chan in self.channels_to_trend:
             self.trends[chan] = toolbox.mytrend(self.period_window)
         return
@@ -44,6 +53,7 @@ class epics_trend(event_process.event_process):
         this_ts = self.parent.shared['timestamp'][0] + self.parent.shared['timestamp'][1]/1.0e9
         for chan in self.channels_to_trend:
             val = self.epics.value(chan)     
+            #self.logger.debug('{:} = {:}'.format(chan,val))
             self.trends[chan].add_entry( this_ts, val )
         return
 
@@ -284,6 +294,7 @@ class acqiris(event_process.event_process):
     def event(self,evt):
         self.raw_traces = evt.get(psana.Acqiris.DataDescV1,self.src)
         if self.raw_traces is None:
+            self.logger.error('No acqiris found in event {:}'.format(self.parent.eventN))
             return
         self.trace = list(self.raw_traces.data(5).waveforms()[0])
         self.peak = self.trace.index( max(self.trace) )
@@ -436,10 +447,12 @@ class build_html(event_process.event_process):
         self.html.start_block('Meta Data', id="metadata")  ##############################################################
                                                                                                                         #
         self.html.start_subblock('Data Information',id='datatime')  ##############################################      #
-        self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:} seconds'.format(                   #      #
+        seconds = self.parent.all_times[-1].seconds()-self.parent.all_times[0].seconds()
+        minutes,fracseconds = divmod(seconds,60)
+        self.html.page.p('Start Time: {:}<br/>End Time: {:}<br/>Duration: {:} seconds ({:02.0f}:{:02.0f})'.format(                   #      #
             time.ctime( self.parent.all_times[0].seconds()) ,                                                    #      #
             time.ctime(self.parent.all_times[-1].seconds()),                                                     #      #
-            self.parent.all_times[-1].seconds()-self.parent.all_times[0].seconds() ) )                           #      #
+            seconds, minutes,fracseconds) )                           #      #
         self.html.page.p('Total files: {:}<br/>Total bytes: {:} ({:0.1f} GB)<br/>'.format(nfile,nbytes,nbytes/(1024.**3)))
         self.html.end_subblock()                                    ##############################################      #
                                                                                                                         #
