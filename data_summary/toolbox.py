@@ -26,7 +26,7 @@ class trend_bin(object):
         if time >= self.begin_time and time < self.end_time:
             self._add(time,val)
         else :
-            raise Exception('you are adding something that is out of my range')
+            raise Exception('you are adding something that is out of my range') # this should NEVER happen
 
     def _add(self,time,val,weight=1.0):
         if self.n == None:

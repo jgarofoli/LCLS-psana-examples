@@ -23,8 +23,9 @@ class job(object):
         self.output_dir = None
         self.gathered_output = []
         self.previous_versions = []
+        self.logger = logging.getLogger(__name__+'.r{:0.0f}'.format( self.rank ))
         self.start_time = time.time()
-        self.logger = logging.getLogger('data_summary.job.r{:0.0f}'.format( self.rank ))
+        self.logger.info('start time is {:}'.format(self.start_time))
         self.eventN = 0
         return
 
@@ -80,7 +81,10 @@ class job(object):
         instr, thisexp = exp.split('/')
         self.set_outputdir(os.path.join( os.path.abspath('.') ,'{:}_run{:0.0f}'.format(thisexp,run)))
 
+        self.logger.info('connecting to data source')
         self.ds = psana.DataSource('exp={:}:run={:0.0f}:idx'.format(exp,run))
+        if self.ds.empty():
+            self.logger.error('data source is EMPTY!')
         self.logger.info('preparing to analyze {:} run {:}'.format(exp,run))
 
         return
@@ -148,4 +152,7 @@ class job(object):
         for sj in self.subjobs:
             sj.endJob()
 
+        #logger_flush()
+        for hdlr in self.logger.__dict__['handlers']: # this is a bad way to do this...
+            hdlr.flush()
         return

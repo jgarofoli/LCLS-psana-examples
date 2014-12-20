@@ -19,7 +19,7 @@ import pprint
 
 class epics_trend(event_process.event_process):
     def __init__(self):
-        self.logger                      = logging.getLogger('data_summary.event_process_lib.epics_trend')
+        self.logger                      = logging.getLogger(__name__+'.epics_trend')
         self.output                      = {}
         self.reducer_rank                = 0
         self.period_window               = 1.
@@ -61,6 +61,7 @@ class epics_trend(event_process.event_process):
     def endJob(self):
         self.reduced_trends = {}
         for chan in self.channels_to_trend:
+            self.logger.info('mpi reducing {:}'.format(chan))
             self.reduced_trends[chan] = self.trends[chan].reduce(self.parent.comm,self.reducer_rank)
 
         if self.parent.rank == self.reducer_rank:
@@ -98,7 +99,7 @@ class counter(event_process.event_process):
     def __init__(self ):
         self.data  = numpy.array([0,])
         self.mergeddata = numpy.array([0,]) 
-        self.logger = logging.getLogger('data_summary.event_process_lib.counter')
+        self.logger = logging.getLogger(__name__+'.counter')
         return
 
     def event(self,evt):
@@ -119,7 +120,7 @@ class evr(event_process.event_process):
     def __init__(self):
         self.evr = []
         self.src = psana.Source('DetInfo(NoDetector.0:Evr.0)')
-        self.logger = logging.getLogger('data_summary.event_process_lib.evr')
+        self.logger = logging.getLogger(__name__+'.evr')
         return
 
     def beginJob(self):
@@ -141,7 +142,7 @@ class time_fiducials(event_process.event_process):
     def __init__(self):
         self.timestamp = ()
         self.src = psana.EventId
-        self.logger = logging.getLogger('data_summary.event_process_lib.time_fiducials')
+        self.logger = logging.getLogger(__name__+'.time_fiducials')
 
     def beginJob(self):
         self.parent.timestamp = self.timestamp
@@ -161,7 +162,7 @@ class simple_trends(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
-        self.logger = logging.getLogger('data_summary.event_process_lib.simple_trends')
+        self.logger = logging.getLogger(__name__+'.simple_trends')
         return
 
     def set_stuff(self,psana_src,psana_device,device_attrs,period_window,in_report=None,in_report_title=None):
@@ -191,6 +192,7 @@ class simple_trends(event_process.event_process):
     def endJob(self):
         self.reduced_trends = {}
         for attr in self.dev_attrs:
+            self.logger.info('mpi reducing {:}'.format(attr))
             self.reduced_trends[attr] = self.trends[attr].reduce(self.parent.comm,self.reducer_rank)
 
         if self.parent.rank == self.reducer_rank:
@@ -225,7 +227,7 @@ class simple_stats(event_process.event_process):
         self.hist_ranges = hist_ranges  # must be a dict of the same length as dev_attrs
         self.output['in_report'] = in_report
         self.output['in_report_title'] = in_report_title
-        self.logger = logging.getLogger('data_summary.event_process_lib.simple_stats')
+        self.logger = logging.getLogger(__name__+'.simple_stats')
 
     def beginJob(self):
         self.histograms = {}
@@ -246,6 +248,7 @@ class simple_stats(event_process.event_process):
     def endJob(self):
         self.reduced_histograms = {}
         for attr in self.dev_attrs:
+            self.logger.info('mpi reducing {:}'.format(attr))
             self.reduced_histograms[attr] = self.histograms[attr].reduce(self.parent.comm,self.reducer_rank)
 
         if self.parent.rank == self.reducer_rank:
@@ -280,7 +283,7 @@ class acqiris(event_process.event_process):
     def __init__(self):
         self.data = {}
         self.output = {}
-        self.logger = logging.getLogger('data_summary.event_process_lib.acqiris')
+        self.logger = logging.getLogger(__name__+'.acqiris')
         return
 
     def set_stuff(self,src,in_report=None,in_report_title=None,histmin=400,histmax=450):
@@ -307,6 +310,7 @@ class acqiris(event_process.event_process):
         # do the stuff on all the other nodes (e.g. send stuff to reducer_rank)
         self.reduced_data = {}
         for evr in self.data:
+            self.logger.info('mpi reducing {:}'.format(evr))
             self.reduced_data[evr] = self.data[evr].reduce(self.parent.comm,self.reducer_rank)
 
 
@@ -346,7 +350,7 @@ class add_available_data(event_process.event_process):
         self.reducer_rank = 0
         self.event_keys = []
         self.config_keys = []
-        self.logger = logging.getLogger('data_summary.event_process_lib.add_available_data')
+        self.logger = logging.getLogger(__name__+'.add_available_data')
         return
 
     def event(self,evt):
@@ -369,7 +373,7 @@ class add_elog(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
-        self.logger = logging.getLogger('data_summary.event_process_lib.add_available_data')
+        self.logger = logging.getLogger(__name__+'.add_available_data')
         return
     
     def beginJob(self):
@@ -388,7 +392,7 @@ class store_report_results(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
-        self.logger = logging.getLogger('data_summary.event_process_lib.store_report_results')
+        self.logger = logging.getLogger(__name__+'.store_report_results')
         return
 
     def endJob(self):
@@ -412,7 +416,8 @@ class build_html(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
-        self.logger = logging.getLogger('data_summary.event_process_lib.build_html')
+        self.logger = logging.getLogger(__name__+'.build_html')
+        self.logger.info(__name__)
         return
 
     def getsize(self,start_path = '.'):
@@ -453,7 +458,7 @@ class build_html(event_process.event_process):
             time.ctime( self.parent.all_times[0].seconds()) ,                                                    #      #
             time.ctime(self.parent.all_times[-1].seconds()),                                                     #      #
             seconds, minutes,fracseconds) )                           #      #
-        self.html.page.p('Total files: {:}<br/>Total bytes: {:} ({:0.1f} GB)<br/>'.format(nfile,nbytes,nbytes/(1024.**3)))
+        self.html.page.p('Total files: {:}<br/>Total bytes: {:} ({:0.1f} GB)<br/>'.format(nfile,nbytes,nbytes/(1000.**3)))
         self.html.end_subblock()                                    ##############################################      #
                                                                                                                         #
                                                                                                                         #

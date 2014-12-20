@@ -28,3 +28,6 @@ def set_logger_level(lvl):
     ch.setLevel( getattr(logging,lvl) )
     return
 
+def logger_flush():
+    fh.flush()
+    return

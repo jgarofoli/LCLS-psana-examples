@@ -1,6 +1,5 @@
 import logging
 
-logger = logging.getLogger('data_summary.event_process')
 
 # copied from psana/Module.h
 # https://www.slac.stanford.edu/~gapon/TALKS/2013_Oct_LCLS_UserMeeting/Batch_Psana_Intro_v2.pdf pg 7
@@ -13,7 +12,7 @@ class event_process(object):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0
-        self.logger = logging.getLogger('data_summary.event_process.default_logger')
+        self.logger = logging.getLogger(__name__+'.default_logger')
         return
 
     def set_parent(self,parent):
