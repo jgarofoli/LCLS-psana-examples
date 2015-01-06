@@ -354,10 +354,12 @@ class add_available_data(event_process.event_process):
         return
 
     def event(self,evt):
-        if self.parent.rank == self.reducer_rank and len(self.event_keys) == 0:
+        if len(self.event_keys) == 0:
             self.event_keys = evt.keys()
-        if self.parent.rank == self.reducer_rank and len(self.config_keys) == 0:
+            self.parent.shared['event_keys'] = self.event_keys
+        if len(self.config_keys) == 0:
             self.config_keys = self.parent.ds.env().configStore().keys()
+            self.parent.shared['config_keys'] = self.config_keys
         return
 
     def endJob(self):
@@ -570,4 +572,36 @@ class build_html(event_process.event_process):
         if self.parent.rank == 0:
             self.make_report(self.parent.gathered_output)
         return
+
+class add_all_devices(event_process.event_process):
+    def __init__(self,devs):
+        self.devs = devs
+        self.logger = logging.getLogger(__name__+'.add_all_devices')
+        self.done = False
+
+    def event(self,evt):
+        if not self.done:
+            keys = evt.keys()
+            myindex = self.parent.subjobs.index(self) + 1
+            self.logger.info('current subjob index is {:}'.format(myindex))
+            inserted = []
+            newsubjobs = []
+            for kk in keys:
+                if kk.alias() in self.devs:
+                    if 'summary_report' in self.devs[kk.alias()] and kk.alias() not in inserted:
+                        self.logger.info('adding {:} to event processing'.format(kk.alias()))
+                        thisjob = event_process.event_process()
+                        self.parent.subjobs.insert( myindex, thisjob )
+                        newsubjobs.append(thisjob)
+                        inserted.append( kk.alias() )
+                        # do something
+            self.logger.info('finished adding new subjobs')
+            for nsj in newsubjobs:
+                nsj.set_parent(self.parent)
+                nsj.beginJob()
+                nsj.beginRun()
+                nsj.event(evt)
+
+            self.logger.info('finished')
+        self.done = True
 
