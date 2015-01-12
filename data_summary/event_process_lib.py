@@ -587,17 +587,43 @@ class add_all_devices(event_process.event_process):
             inserted = []
             newsubjobs = []
             for kk in keys:
-                if kk.alias() in self.devs:
-                    if 'summary_report' in self.devs[kk.alias()] and kk.alias() not in inserted:
-                        self.logger.info('adding {:} to event processing'.format(kk.alias()))
-                        thisjob = event_process.event_process()
-                        self.parent.subjobs.insert( myindex, thisjob )
-                        newsubjobs.append(thisjob)
-                        inserted.append( kk.alias() )
+                alias = kk.alias()
+                if alias == '':
+                    src = str(kk.src())
+                    self.logger.info('alias is empty, falling back to src: "{:}"'.format(src))
+                    if src == 'BldInfo(FEEGasDetEnergy)':
+                        alias = 'Gasdet'
+                    elif src == 'BldInfo(EBeam)':
+                        alias = 'EBeam'
+                    self.logger.info('setting alias to {:}'.format(alias))
+                if alias in self.devs:
+                    self.logger.info(alias)
+                    if 'summary_report' in self.devs[alias] and alias not in inserted:
+                        self.logger.info('adding {:} to event processing'.format(alias))
+                        self.logger.info(self.devs[alias]['summary_report'])
+                        if alias=='Acqiris':
+                            thisjob = acqiris()
+                            thisjob.set_stuff(kk.src(),*self.devs[alias]['summary_report']['set_stuff']['args'],**self.devs[alias]['summary_report']['set_stuff']['kwargs'])
+                            self.parent.subjobs.insert( myindex, thisjob )
+                            newsubjobs.append(thisjob)
+                        else:
+                            if 'simple_stats' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_stats']:
+                                thisjob = simple_stats()
+                                thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['simple_stats']['args'],**self.devs[alias]['summary_report']['simple_stats']['kwargs'])
+                                self.parent.subjobs.insert( myindex, thisjob )
+                                newsubjobs.append(thisjob)
+                            if 'simple_trends' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_trends']:
+                                thisjob = simple_trends()
+                                thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['simple_trends']['args'],**self.devs[alias]['summary_report']['simple_trends']['kwargs'])
+                                self.parent.subjobs.insert( myindex, thisjob )
+                                newsubjobs.append(thisjob)
+                        inserted.append( alias )
                         # do something
             self.logger.info('finished adding new subjobs')
-            for nsj in newsubjobs:
+            ranks = range(self.parent.size)
+            for ii,nsj in enumerate(newsubjobs):
                 nsj.set_parent(self.parent)
+                nsj.reducer_rank = ranks[ ii % len(ranks) ]
                 nsj.beginJob()
                 nsj.beginRun()
                 nsj.event(evt)

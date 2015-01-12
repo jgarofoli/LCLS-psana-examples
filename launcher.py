@@ -23,15 +23,9 @@ myMPIrunner.add_event_process( data_summary.evr() )
 myMPIrunner.add_event_process( data_summary.time_fiducials() )
 myMPIrunner.add_event_process( data_summary.add_available_data() )
 myMPIrunner.add_event_process( data_summary.add_elog() )
-
 myMPIrunner.add_event_process( data_summary.add_all_devices( data_summary.devices['device_sets'] ) )
 
 
-#for dev in sorted(data_summary.devices['device_sets']):
-#    print dev, ":"
-#    if 'summary_report' in data_summary.devices['device_sets']:
-#        print data_summary.devices['device_sets']['summary_report']
-#
 myMPIrunner.add_event_process( data_summary.store_report_results() )
 myMPIrunner.add_event_process( data_summary.build_html() ) # this has to be last
 

@@ -3,7 +3,8 @@
                                      'detName': 'CxiEndstation',
                                      'devId': 0,
                                      'devName': 'Acqiris'},
-                             'device': 'Acqiris'},
+                             'device': 'Acqiris',
+                             'summary_report': {'add_pvs':None,'add_histos':None,'add_trends':None,'set_stuff':{'args':[],'kwargs':{'in_report':'detectors', 'in_report_title':'Acqiris Stats', 'histmin':400, 'histmax':500 }}}}, ##### HERE HERE HERE #####
                  'atc': {'desc': 'CXI DSB Attenuators',
                          'device': 'attn',
                          'pvs': {'a0': {'base': 'CXI:ATC:MMS:26',
@@ -74,7 +75,7 @@
                               'pvs': {'targ': {'base': 'CXI:DG2:MMS:09'},
                                       'x': {'base': 'CXI:DG2:MMS:07'},
                                       'y': {'base': 'CXI:DG2:MMS:08'}},
-                              'summary_report': ['add_pvs','add_histos','add_trends']}, ##### HERE HERE HERE #####
+                              'summary_report': {'add_pvs':None,'add_trends':None,'simple_stats':None}}, ##### HERE HERE HERE #####
                  'dg2lens': {'desc': 'CXI DG2 Be Focusing Lense Assembly',
                              'device': 'lens',
                              'pvs': {'x': {'base': 'CXI:DG2:MMS:05'},
@@ -216,10 +217,16 @@
                                       'm6': {'base': 'CXI:DG4:MMS:11'}}},
                  'EBeam': {'desc': 'LCLS ebeam data',
                            'det': {'type': 0, 'typeName': 'EBeam'},
-                           'device': 'EBeam'},
+                           'device': 'EBeam',
+                            'summary_report': {'add_pvs':None,'add_histos':None,
+                                                'simple_trends':{'args':[['ebeamCharge','ebeamPhotonEnergy'], 1.0], 'kwargs':{'in_report':'detectors', 'in_report_title':'Ebeam Trends'}},
+                                                'simple_stats':{'args':[['ebeamCharge','ebeamPhotonEnergy'], {'ebeamCharge':(100,0,.3), 'ebeamPhotonEnergy': (500,9000,10000)}],'kwargs':{'in_report':'detectors', 'in_report_title':'Ebeam Stats' }}}}, ##### HERE HERE HERE #####
                  'Gasdet': {'desc': 'LCLS gas detector',
                             'det': {'type': 2, 'typeName': 'FEEGasDetEnergy'},
-                            'device': 'Gasdet'},
+                            'device': 'Gasdet',
+                            'summary_report': {'add_pvs':None,
+                                                'simple_trends':{'args':[['f_11_ENRC', 'f_12_ENRC','f_21_ENRC','f_22_ENRC','f_63_ENRC','f_64_ENRC',], 1.0],'kwargs':{'in_report':'detectors','in_report_title':'Gas Detector Trends'}},
+                                                'simple_stats':{'args':[['f_11_ENRC', 'f_12_ENRC','f_21_ENRC','f_22_ENRC','f_63_ENRC','f_64_ENRC',], {'f_11_ENRC': (100,0,5), 'f_12_ENRC': (100,0,5),'f_21_ENRC': (100,0,5),'f_22_ENRC': (100,0,5),'f_63_ENRC': (100,0,5),'f_64_ENRC': (100,0,5),}],'kwargs':{'in_report':'detectors', 'in_report_title':'Gas Detector Stats' }}}}, ##### HERE HERE HERE #####
 #                            'functions': {'file': 'gasdet_funcs'}}, 
 #                                          'path': '/reg/neh/home1/koglin/src/ana/'}},
 #                 'Dg2Imp': {'desc': 'CXI DG2 IMP',
