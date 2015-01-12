@@ -286,8 +286,9 @@ class acqiris(event_process.event_process):
         self.logger = logging.getLogger(__name__+'.acqiris')
         return
 
-    def set_stuff(self,src,in_report=None,in_report_title=None,histmin=400,histmax=450):
+    def set_stuff(self,src,psana_device,in_report=None,in_report_title=None,histmin=400,histmax=450):
         self.src = psana.Source(src)
+        self.dev = psana_device
         self.output['in_report'] = in_report
         self.output['in_report_title'] = in_report_title
         self.histmin = histmin
@@ -295,7 +296,7 @@ class acqiris(event_process.event_process):
         return
 
     def event(self,evt):
-        self.raw_traces = evt.get(psana.Acqiris.DataDescV1,self.src)
+        self.raw_traces = evt.get(self.dev,self.src)
         if self.raw_traces is None:
             self.logger.error('No acqiris found in event {:}'.format(self.parent.eventN))
             return
@@ -573,6 +574,87 @@ class build_html(event_process.event_process):
             self.make_report(self.parent.gathered_output)
         return
 
+class ipimb(object):
+    def __init__(self):
+        self.output = {}
+        self.reducer_rank = 0
+        self.logger = logging.getLogger(__name__+'.ipimb')
+
+        return
+
+    def set_stuff(self,psana_src,psana_device,in_report=None,in_report_title=None,period_window=1.):
+        self.src         = psana.Source(psana_src)
+        self.dev         = psana_device
+        self.output['in_report'] = in_report
+        self.output['in_report_title'] = in_report_title
+        self.period_window = period_window
+        return
+
+    def set_parent(self,parent):
+        self.parent = parent
+
+    def beginJob(self):
+        #print "rank {:}".format(self.parent.rank)
+        self.trends = {}
+        for chan in ['channel 0','channel 1','channel 2','channel 3','sum','xpos','ypos']:
+            self.trends[chan] = toolbox.mytrend(self.period_window)
+        return
+
+    def beginRun(self):
+        return
+
+    def event(self, evt):
+        this_ts = self.parent.shared['timestamp'][0] + self.parent.shared['timestamp'][1]/1.0e9
+        self.raw_ipimb        = evt.get(self.dev,self.src)
+        self.sum_ipimb        = self.raw_ipimb.sum()
+        self.channels_ipimb   = self.raw_ipimb.channel()
+        self.xpos_ipimb       = self.raw_ipimb.xpos()
+        self.ypos_ipimb       = self.raw_ipimb.ypos()
+        self.trends['xpos'].add_entry(this_ts,self.xpos_ipimb)
+        self.trends['ypos'].add_entry(this_ts,self.ypos_ipimb)
+        self.trends['sum'].add_entry(this_ts,self.sum_ipimb)
+        self.trends['channel 0'].add_entry(this_ts,self.channels_ipimb[0])
+        self.trends['channel 1'].add_entry(this_ts,self.channels_ipimb[1])
+        self.trends['channel 2'].add_entry(this_ts,self.channels_ipimb[2])
+        self.trends['channel 3'].add_entry(this_ts,self.channels_ipimb[3])
+        return
+
+    def endRun(self):
+        return
+
+    def endJob(self):
+        self.reduced_trends = {}
+        for chan in self.trends:
+            self.logger.info('mpi reducing {:}'.format(chan))
+            self.reduced_trends[chan] = self.trends[chan].reduce(self.parent.comm,self.reducer_rank)
+
+        if self.parent.rank == self.reducer_rank:
+            self.output['figures']   = {}
+            self.output['table']     = {}
+            self.output['text']      = []
+            self.output['text'].append('PVs trended below the fold: <br/>\n<pre>')
+            for chan in self.trends:
+                self.output['text'][-1] += chan+'\n'
+            self.output['text'][-1]     += '</pre>'
+            fig = pylab.figure()
+            for chan in self.trends:
+                self.output['figures'][chan] = {}
+                fig.clear()
+                thisxs    = self.reduced_trends[chan].getxs()
+                thismeans = self.reduced_trends[chan].getmeans()
+                thismins = self.reduced_trends[ chan].getmins()
+                thismaxs = self.reduced_trends[ chan].getmaxs()
+                pylab.plot(thisxs,thismeans,'k')
+                pylab.plot(thisxs,thismaxs,'r')
+                pylab.plot(thisxs,thismins,'b')
+                pylab.title(chan)
+                pylab.savefig( os.path.join( self.parent.output_dir, 'figure_trend_{:}.png'.format(chan.replace(':','_')) ))
+                self.output['figures'][chan]['png'] = os.path.join( self.parent.output_dir, 'figure_trend_{:}.png'.format( chan.replace(':','_') ))
+                # finish this section
+            del fig
+            self.parent.output.append(self.output)
+        return
+
 class add_all_devices(event_process.event_process):
     def __init__(self,devs):
         self.devs = devs
@@ -603,9 +685,25 @@ class add_all_devices(event_process.event_process):
                         self.logger.info(self.devs[alias]['summary_report'])
                         if alias=='Acqiris':
                             thisjob = acqiris()
-                            thisjob.set_stuff(kk.src(),*self.devs[alias]['summary_report']['set_stuff']['args'],**self.devs[alias]['summary_report']['set_stuff']['kwargs'])
+                            thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['set_stuff']['args'],**self.devs[alias]['summary_report']['set_stuff']['kwargs'])
                             self.parent.subjobs.insert( myindex, thisjob )
                             newsubjobs.append(thisjob)
+                        elif 'Ipimb' in alias:
+                            if 'epics_trend' in self.devs[alias]['summary_report']:
+                                thisjob = epics_trend()
+                                thisjob.add_pv_trend(self.devs[alias]['pvs']['targ']['base']+'.RBV')
+                                thisjob.add_pv_trend(self.devs[alias]['pvs']['x']['base']+'.RBV')
+                                thisjob.add_pv_trend(self.devs[alias]['pvs']['y']['base']+'.RBV')
+                                thisjob.output['in_report'] = 'detectors'
+                                thisjob.output['in_report_title'] = '{:} Epics Trends'.format(alias)
+                                self.parent.subjobs.insert( myindex, thisjob )
+                                newsubjobs.append(thisjob)
+                                thisjob = ipimb()
+                                thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['ipimb']['args'],**self.devs[alias]['summary_report']['ipimb']['kwargs'])
+                                thisjob.output['in_report'] = 'detectors'
+                                thisjob.output['in_report_title'] = '{:} Diode Voltages'.format(alias)
+                                self.parent.subjobs.insert( myindex, thisjob )
+                                newsubjobs.append(thisjob)
                         else:
                             if 'simple_stats' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_stats']:
                                 thisjob = simple_stats()

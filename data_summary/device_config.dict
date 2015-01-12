@@ -75,7 +75,7 @@
                               'pvs': {'targ': {'base': 'CXI:DG2:MMS:09'},
                                       'x': {'base': 'CXI:DG2:MMS:07'},
                                       'y': {'base': 'CXI:DG2:MMS:08'}},
-                              'summary_report': {'add_pvs':None,'add_trends':None,'simple_stats':None}}, ##### HERE HERE HERE #####
+                              'summary_report': {'epics_trend':True,'ipimb':{'args':[],'kwargs':{}}}}, ##### HERE HERE HERE #####
                  'dg2lens': {'desc': 'CXI DG2 Be Focusing Lense Assembly',
                              'device': 'lens',
                              'pvs': {'x': {'base': 'CXI:DG2:MMS:05'},
@@ -110,7 +110,8 @@
                               'device': 'Diode',
                               'pvs': {'targ': {'base': 'CXI:DG3:MMS:03'},
                                       'x': {'base': 'CXI:DG3:MMS:01'},
-                                      'y': {'base': 'CXI:DG3:MMS:02'}}},
+                                      'y': {'base': 'CXI:DG3:MMS:02'}},
+                              'summary_report': {'epics_trend':True,'ipimb':{'args':[],'kwargs':{}}}}, ##### HERE HERE HERE #####
                  'Dg3Pim': {'desc': 'CXI DG3 pop-in camera assembly',
                             'det': {'detId': 0,
                                     'detName': 'CxiDg4',

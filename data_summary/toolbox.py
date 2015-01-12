@@ -1,6 +1,7 @@
 from mpi4py import MPI
 import math
 import numpy
+#import logging # MPI doesn't play nicely with logging, it seams
 
 class trend_bin(object):
     def __init__(self,begin_time,end_time):
@@ -14,6 +15,7 @@ class trend_bin(object):
         self.minval    = None
         self.maxval    = None
         self.avg       = None
+        #self.logger                      = logging.getLogger(__name__+'.trend_bin')
 
     def __contains__(self,time):
         if time >= self.begin_time and time < self.end_time:
@@ -43,7 +45,12 @@ class trend_bin(object):
             self.sum2 += val**2.0
             self.avg   = (self.n - weight)/self.n * self.avg + weight/self.n * val
             #print self.n, self.sum1, self.sum2
-            self.std   = math.sqrt( round(self.n*self.sum2 - self.sum1**2.0,9) ) / self.n
+            myinner = round(self.n*self.sum2 - self.sum1**2.0,9)
+            if myinner < 0: # this is not correct
+                #self.logger.error('radical argument is < 0: {:}'.format(myinner))      
+                self.std = 0
+            else:
+                self.std   = math.sqrt( myinner ) / self.n
             if val < self.minval:
                 self.minval = val
             if val > self.maxval:
@@ -65,6 +72,7 @@ class mytrend(object):
     def __init__(self,period_window):
         self.period_window=period_window # this should be in seconds
         self.trend_periods = []
+        #self.logger                      = logging.getLogger(__name__+'.mytrend')
         return
 
     def get_begin_end_times(self,time):
@@ -150,6 +158,7 @@ class myhist(object):
         self.underflow = None
         self.maxval = None
         self.minval = None
+        #self.logger                      = logging.getLogger(__name__+'.myhist')
         return
 
     def __add__(self,other):
