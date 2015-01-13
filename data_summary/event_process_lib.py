@@ -100,12 +100,15 @@ class counter(event_process.event_process):
         self.data  = numpy.array([0,])
         self.mergeddata = numpy.array([0,]) 
         self.logger = logging.getLogger(__name__+'.counter')
+        self.N = 100
         return
 
     def event(self,evt):
         #id = evt.get(psana.EventId)
         #print 'rank', pp.rank, 'analyzed event with fiducials', id.fiducials()
         self.data[0] += 1
+        if self.data[0] % self.N == 0:
+            self.logger.info('processed {:} events'.format(self.data[0]))
         return
 
     def endJob(self):

@@ -23,6 +23,7 @@ class job(object):
         self.output_dir = None
         self.gathered_output = []
         self.previous_versions = []
+        self.x_axes = ['time',]
         self.logger = logging.getLogger(__name__+'.r{:0.0f}'.format( self.rank ))
         self.start_time = time.time()
         self.logger.info('start time is {:}'.format(self.start_time))
@@ -86,7 +87,10 @@ class job(object):
         if self.ds.empty():
             self.logger.error('data source is EMPTY!')
         self.logger.info('preparing to analyze {:} run {:}'.format(exp,run))
+        return
 
+    def set_x_axes(self,xaxes):
+        self.x_axes = xaxes
         return
 
     def add_event_process(self,sj):
