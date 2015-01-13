@@ -205,7 +205,10 @@ class myhist(object):
         wgtavg = 0.
         for lowedge,binentries in zip(self.edges, self.binentries):
             wgtavg += binentries * (lowedge + self.binwidth / 2.)
-        wgtavg /= sum(self.binentries)
+        if int(sum(self.binentries)) != 0:
+            wgtavg /= sum(self.binentries)
+        else :
+            wgtavg = 0.
         return wgtavg
 
     def rms(self):
@@ -217,7 +220,10 @@ class myhist(object):
         for lowedge,binentries in zip(self.edges,self.binentries):
             summ += binentries* ( (lowedge+self.binwidth/2.) -  mean )**2
             total += binentries
-        std = math.sqrt( summ / total )
+        if total != 0.:
+            std = math.sqrt( summ / total )
+        else:
+            std = 0.
         return std
 
     def std(self):

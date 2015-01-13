@@ -66,7 +66,7 @@ class job(object):
         os.chdir(self.output_dir)
         self.logger_fh = logging.FileHandler('log_{:0.0f}.log'.format(self.rank))
         self.logger_fh.setLevel(logging.DEBUG)
-        self.logger_fh.setFormatter( logging.Formatter( '%(asctime)s - %(name)s - %(levelname)s - %(message)s' ) )
+        self.logger_fh.setFormatter( logging.Formatter( '%(asctime)s - %(levelname)s - %(name)s - %(message)s' ) )
         self.logger.addHandler( self.logger_fh )
         self.logger.info( "output directory is "+self.output_dir )
         return

@@ -17,6 +17,9 @@ class event_process(object):
 
     def set_parent(self,parent):
         self.parent = parent
+        #if 'r{:}'.format(self.parent.rank) not in self.logger.name:
+            #self.logger.name = '{:}.r{:}'.format(self.logger.name,self.parent.rank)
+        
 
     def beginJob(self):
         #print "rank {:}".format(self.parent.rank)

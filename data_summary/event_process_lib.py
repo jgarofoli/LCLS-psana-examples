@@ -590,9 +590,6 @@ class ipimb(object):
         self.period_window = period_window
         return
 
-    def set_parent(self,parent):
-        self.parent = parent
-
     def beginJob(self):
         #print "rank {:}".format(self.parent.rank)
         self.trends = {}
@@ -721,11 +718,12 @@ class add_all_devices(event_process.event_process):
             ranks = range(self.parent.size)
             for ii,nsj in enumerate(newsubjobs):
                 nsj.set_parent(self.parent)
+                nsj.logger = logging.getLogger( self.parent.logger.name + '.' + nsj.logger.name.split('.')[-1] )
                 nsj.reducer_rank = ranks[ ii % len(ranks) ]
                 nsj.beginJob()
                 nsj.beginRun()
                 nsj.event(evt)
 
-            self.logger.info('finished')
+            self.logger.info('finished setting up new subjobs')
         self.done = True
 
