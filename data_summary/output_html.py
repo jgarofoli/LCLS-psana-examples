@@ -3,6 +3,7 @@ from markup import oneliner as e
 import os
 import shutil
 
+# this should be done better
 html_ref_dir = '/reg/neh/home/justing/CXI/DS/data_summary_html/'
 
 class report:
@@ -25,6 +26,7 @@ class report:
         shutil.copy( os.path.join( html_ref_dir, 'js', 'bootstrap.min.js' ), os.path.join(jsdir) )
         shutil.copy( os.path.join( html_ref_dir, 'jquery.min.js' ), os.path.join(jsdir) )
         shutil.copy( os.path.join( html_ref_dir, 'toggler.js' ), os.path.join(jsdir) )
+        shutil.copy( os.path.join( html_ref_dir, 'sticky.js' ), os.path.join(jsdir) )
 
         self.sections = []
 
@@ -111,7 +113,9 @@ class report:
 
     def mk_nav(self):
         self.page.div(class_='col-md-3 blog-sidebar text-muted')
-        self.page.div(class_='nav sidebar-module')
+        self.page.div(id_='sticky-anchor') # sticky nav from here: jsfiddle.net/livibetter/HV9HM
+        self.page.div.close()
+        self.page.div(class_='nav sidebar-module',id_='sticky')
         self.page.h4('Navigation')
         self.page.ul(class_='list-unstyled',role='navigation',style='font-size:90%')
         for sec in self.sections:
@@ -120,7 +124,6 @@ class report:
                 self.page.li( e.a( subsec['title'], href='#{:}'.format(subsec['id']) ) )
         self.page.ul.close()
         self.page.div.close()
-        self.page.p('maybe apply a scroll-then-stick feature to the navigation menu.')
         self.page.div.close()
 
     def add_table(self,table):

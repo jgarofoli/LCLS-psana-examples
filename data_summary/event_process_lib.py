@@ -452,7 +452,7 @@ class build_html(event_process.event_process):
         self.html = output_html.report(  self.parent.exp, self.parent.run, 
             title='{:} Run {:}'.format(self.parent.exp,self.parent.run),
             css=('css/bootstrap.min.css','jumbotron-narrow.css','css/mine.css'),
-            script=('js/ie-emulation-modes-warning.js','js/jquery.min.js','js/toggler.js'),
+            script=('js/ie-emulation-modes-warning.js','js/jquery.min.js','js/toggler.js','js/sticky.js'),
             output_dir=self.parent.output_dir)
 
         self.html.start_block('Meta Data', id="metadata")  ##############################################################
@@ -466,7 +466,7 @@ class build_html(event_process.event_process):
             seconds, minutes,fracseconds) )                           #      #
         self.html.page.p('Total files: {:}<br/>Total bytes: {:} ({:0.1f} GB)<br/>'.format(nfile,nbytes,nbytes/(1000.**3)))
         self.html.end_subblock()                                    ##############################################      #
-                                                                                                                        #
+
                                                                                                                         #
         self.html.start_subblock('Processing Information', id='datainfo')      ###################################      #
         self.html.page.p('Report time: {:}'.format(time.ctime()))                                                #      #
@@ -478,6 +478,11 @@ class build_html(event_process.event_process):
         #self.html.page.p( "CPU time for final step on rank {:} : {:0.1f} seconds".format(                       #      #
             #self.rank, self.finaltime))                                                                         #      #
         self.html.end_subblock()                                               ###################################      #
+
+        self.html.start_subblock('Access the Data',id='accessdata')
+        self.html.page.p('Access this data with ipsdata on a psana node:<br/><pre>~koglin/repo/psdata/trunk/src/ipsdata.sh -e {:} -r {:}</pre>'.format(self.parent.exp.split('/')[-1], self.parent.run))
+        self.html.end_subblock()                                    ##############################################      #
+                                                                                                                        #
                                                                                                                         #
         for thisep in sorted(gathered):                                                                                #
             if thisep['in_report'] == 'meta':                                                                     #
@@ -493,7 +498,7 @@ class build_html(event_process.event_process):
                     self.html.page.add( output_html.mk_table( thisep['table'] )() )                           #    #
                 if 'figures' in thisep:
                     self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
-                    for img in sorted(thisep['figures']):                                               #     #    #
+                    for img in sorted(thisep['figures']):                                                  #     #    #
                         self.html.page.img(src=os.path.basename(thisep['figures'][img]['png']),style='width:49%;')        #     #    #
                     self.html.end_hidden()                                           ############################     #    #
                 self.html.end_subblock()                                    #######################################    #
@@ -518,7 +523,7 @@ class build_html(event_process.event_process):
                     self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
                     for img in sorted(thisep['figures']):                                               #     #    #
                         self.html.page.img(src=os.path.basename(thisep['figures'][img]['png']),style='width:49%;')        #     #    #
-                    self.html.end_hidden()                                           ############################     #    #
+                    self.html.end_hidden()                                           ############################ #    #
                 self.html.end_subblock()                                    #######################################    #
                                                                                                                        #
                                                                                                                        #
@@ -532,7 +537,7 @@ class build_html(event_process.event_process):
         self.html.page.p('link to LSF log file.')                                                                     #
         logs = ','.join(['<a href="log_{0:}.log">log {0:}</a> '.format(x) for x in xrange(self.parent.size) ])
         self.html.page.p('Subjob log files: {:}'.format(logs) )
-        if len(self.parent.previous_versions) > 0:                                                                           #
+        if len(self.parent.previous_versions) > 0:                                                                    #
             self.html.start_subblock('Previous Versions',id='prevver') ###################### a sub block ########    #
             self.html.start_hidden('prevver')                             ############## hidden part ####        #    #
             self.html.page.table(class_='table table-condensed')                                        #        #    #

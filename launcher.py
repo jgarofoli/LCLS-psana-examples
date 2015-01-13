@@ -31,8 +31,11 @@ data_summary.set_logger_level(verbosity_levels[ args.verbosity-1 ]) # choose one
 myMPIrunner = data_summary.job()
 
 myMPIrunner.set_datasource(exp=args.exp,run=args.run)
-myMPIrunner.set_x_axes(args.x_axes)
 myMPIrunner.set_maxEventsPerNode(args.max_events)
+myMPIrunner.set_x_axes(args.x_axes)
+# other choices are (for CXI): CXI:INS:CLC:DIAT1 (transmission first harmonic)
+#                              CXI:INS:CLC:DIAT2 (2nd harmonic)
+#                              CXI:INS:CLC:DIAT3 (3rd harmonic)
 
 # add some standard stuff that other event processors may use
 myMPIrunner.add_event_process( data_summary.counter()                       )
