@@ -37,9 +37,9 @@ class event_process(object):
     def endJob(self):
         return
 
-#    def beginCalibCycle(self):
+#    def beginStep(self):
 #        return
-#    def endCalibCycle(self):
+#    def endStep(self):
 #        return
 
 
