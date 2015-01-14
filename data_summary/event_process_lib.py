@@ -582,7 +582,7 @@ class build_html(event_process.event_process):
             self.make_report(self.parent.gathered_output)
         return
 
-class ipimb(object):
+class ipimb(event_process.event_process):
     def __init__(self):
         self.output = {}
         self.reducer_rank = 0

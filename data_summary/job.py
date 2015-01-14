@@ -137,7 +137,7 @@ class job(object):
 
             for sj in self.subjobs:
                 sj.beginRun()
-
+                
             for ii in xrange(mylength):
                 self.evt = run.event(mytimes[ii])
                 self.eventN = ii
