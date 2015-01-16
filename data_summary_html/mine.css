@@ -1,0 +1,53 @@
+.myhidden {
+    display: none;
+}
+
+h4 {
+    margin-top: 2em;
+    border-bottom: 1px solid #EEE;
+}
+
+.header {
+    position: fixed !important;
+    top: 0px;
+    width: 900px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background: white;
+    z-index: 1000;
+}
+
+.jumbotron {
+    margin-top: 70px;
+    margin-bottom: 0px;
+}
+
+a.anchor {
+    display: block;
+    position: relative;
+    top: -85px;
+}
+
+.row {
+    margin-top: 0px;
+}
+
+body {
+    position : relative;
+}
+
+h3 {
+    margin-top: 38px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-radius: 4px;
+}
+
+#sticky {
+}
+
+#sticky.stick {
+    position: fixed;
+    top: 50;
+    z-index: 10000;
+}
