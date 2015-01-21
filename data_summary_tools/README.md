@@ -18,3 +18,15 @@ git pull origin master
 ```
 
 From http://stackoverflow.com/a/13738951
+
+## launcher.py
+
+A script that will launch a data summary job and automatically pick up which Data
+sources are available, and include some information about them.
+
+## myDS.py
+
+Currently not working with the latest versions of the module.
+
+An example of a specific analysis of data.
+
