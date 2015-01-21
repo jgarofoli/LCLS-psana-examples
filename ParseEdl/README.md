@@ -1,6 +1,6 @@
 # ParseEDL tool
 
-Not waranteed to always work.  Only tested on CXI, some time ago.
+Not warranted to always work.  Only tested on CXI, some time ago.
 
 ## cxi_det_config.py
 ## EDLParse.py
