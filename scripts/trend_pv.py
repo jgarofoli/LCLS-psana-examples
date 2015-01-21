@@ -1,10 +1,16 @@
-import epics
-import psmon.plots
-import psmon.publish
-import numpy
 import socket
 import time
 import argparse
+
+try:
+    import epics
+    import psmon.plots
+    import psmon.publish
+    import numpy
+except ImportError as e:
+    print e
+    raise ImportError("could not import, probably need to add and ana evn.  Try:"
+            ". /reg/g/psdm/etc/ana_env.sh")
 
 class plotter(object):
     """a striptool like object"""
