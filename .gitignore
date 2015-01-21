@@ -1,4 +1,4 @@
 *.pyc
 *.png
 *.pdf
-cxi*/*
+*.log
