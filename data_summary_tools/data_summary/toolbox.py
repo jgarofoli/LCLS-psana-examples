@@ -3,6 +3,11 @@ import math
 import numpy
 #import logging # MPI doesn't play nicely with logging, it seams
 
+class scatter(object):
+    def __init__(self,xname,yname):
+        return
+
+
 class trend_bin(object):
     def __init__(self,begin_time,end_time):
         #print "*** new trend_bin ***"
