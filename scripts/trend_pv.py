@@ -1,6 +1,9 @@
 import socket
 import time
 import argparse
+import subprocess
+import signal
+import os
 
 try:
     import epics
@@ -37,8 +40,22 @@ class plotter(object):
             epics.camonitor(pvname,callback=self.callback)
 
         print ". /reg/g/psdm/etc/ana_env.sh"
-        print "psplot -s {:} -p {:} {:}".format(socket.gethostname(),self.port,' '.join([pv.replace(':','-') for pv in self.channels]))
+        self.psplot_str = "psplot -s {:} -p {:} {:}".format(socket.gethostname(),self.port,' '.join([pv.replace(':','-') for pv in self.channels]))
+        print self.psplot_str
         return
+
+    def start_display(self):
+        self.psplot_exe = '/reg/g/psdm/sw/releases/ana-current/arch/x86_64-rhel6-gcc44-opt/bin/psplot'
+        self.chld_args =  self.psplot_str.split()
+        self.chld_args[0] = self.psplot_exe
+        self.chld_cmd = ' '.join(self.chld_args)
+        self.chld = subprocess.Popen( self.chld_cmd , stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid) # 
+        return
+
+    def stop_display(self):
+        os.killpg(self.chld.pid, signal.SIGTERM)
+        return
+
 
     def stop_all(self):
         for pvname in self.channels:
@@ -102,6 +119,9 @@ if __name__ == "__main__":
     ps.add_argument("--lookback","-l",type=int,default=300,dest="lookback",
             help="look back time")
 
+    ps.add_argument("--display-local","-d",default=False,action='store_true',dest="display",
+            help="launch automatically a local display of the figures")
+
     args = ps.parse_args()
 
     plt = plotter(port=args.port)
@@ -117,3 +137,6 @@ if __name__ == "__main__":
     plt.set_lookback(args.PV,args.lookback)
 
     plt.start_all()
+
+    if args.display:
+        plt.start_display()
