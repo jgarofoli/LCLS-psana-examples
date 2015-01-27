@@ -5,7 +5,24 @@ import numpy
 
 class scatter(object):
     def __init__(self,xname,yname):
+        self.entries = []
         return
+
+    def add_entry(self,x,y):
+        self.entries.append( (x,y) )
+        # use zip(*self.entries)
+        # to get [(x0,x1,x2,x3,...),(y0,y1,y2,y3,...)]
+        return
+
+    def reduce(self,comm,reducer_rank):
+        self.gathered = comm.gather( self.entries, root=reducer_rank) 
+
+        if comm.Get_rank() == reducer_rank:
+            reduced_scatter = []
+            for gath in self.gathered:
+                reduced_scatter.extend(gath)
+            
+            return reduced_scatter
 
 
 class trend_bin(object):
