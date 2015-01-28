@@ -2,7 +2,7 @@ import argparse
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot
-matplotlib.pyplot.xkcd()
+matplotlib.pyplot.xkcd() # 
 import jutils
 import data_summary
 
