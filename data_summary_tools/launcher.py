@@ -1,6 +1,7 @@
 import argparse
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.pyplot
 import jutils
 import data_summary
 
@@ -23,12 +24,18 @@ ps.add_argument("--plot-vs","-X",action='append',default=['time',], dest="x_axes
 ps.add_argument("--verbose", '-v', action='count', default=4, dest="verbosity",
         help="verbosity level of logging, default is 4 (INFO), choices are 1-5 (CRITICAL, ERROR, WARNING, INFO, DEBUG), can pass -v multiple times")
 
+ps.add_argument("--xkcd", "-x", action="store_true", default=False, dest="xkcd",
+        help="use XKCD plot sytle")
+
 args = ps.parse_args()
 
 verbosity_levels = ["CRITICAL","ERROR","WARNING","INFO","DEBUG"]
 if args.verbosity != 4:
     args.verbosity -= 4
 data_summary.set_logger_level(verbosity_levels[ args.verbosity-1 ]) # choose one of DEBUG INFO WARNING ERROR CRITICAL
+
+if args.xkcd:
+    matplotlib.pyplot.xkcd() # 
 
 myMPIrunner = data_summary.job()
 
