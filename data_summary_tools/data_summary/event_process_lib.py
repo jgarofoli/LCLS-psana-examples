@@ -17,6 +17,107 @@ import pprint
 #code.interact(None,None,locals())
 #logger = logging.getLogger('data_summary.event_process_lib')
 
+class epics_scatter(event_process.event_process):
+    def __init__(self):
+        self.logger                      = logging.getLogger(__name__+'.epics_scatter')
+        self.scatter_x_channel           = None
+        self.scatter_y_channel           = None
+        self.output                      = {}
+        self.output['in_report']         = None
+        self.output['in_report_title']   = None
+
+        return
+
+    def beginJob(self):
+        self.epics = self.parent.ds.env().epicsStore()
+        self.allPvs = self.epics.names()
+        self.scatters = {}
+        return
+
+    def add_pv_x(self,chan):
+        self.scatter_x_channel = chan
+        return
+
+    def add_pv_y(self,chan):
+        self.scatter_y_channel = chan
+        return
+
+    def event(self,evt):
+        return
+
+    def endJob(self):
+        return
+
+class cspad(event_process.event_process):
+    def __init__(self):
+        self.logger                      = logging.getLogger(__name__+'.cspad')
+        self.output                      = {}
+        self.output['in_report']         = None
+        self.output['in_report_title']   = None
+        self.frame                       = None
+        self.nframes                     = numpy.array([0])
+        self.reducer_rank                = 0
+        return
+
+    def beginJob(self):
+        return
+
+    def add_frame(self,frame):
+        if self.frame == None:
+            self.frame = numpy.zeros_like(frame)
+
+        self.frame += frame
+        self.nframes[0] += 1
+        return
+
+    def set_stuff(self,psana_src,psana_device,in_report=None,in_report_title=None):
+        self.src         = psana.Source(psana_src)
+        self.dev         = psana_device
+        self.output['in_report']         = in_report
+        self.output['in_report_title']   = in_report_title
+
+    def event(self,evt):
+        cspad = evt.get(self.dev, self.src)
+        a = []
+        for i in range(0,4):
+            quad = cspad.quads(i)
+            d    = quad.data()
+            a.append(numpy.vstack([ d[j] for j in range(0,8) ]))
+
+        frame_raw = numpy.hstack(a)
+        self.add_frame(frame_raw)
+        return
+
+    def endJob(self):
+        self.logger.info('mpi reducing cspad')
+
+        self.mergedframe = numpy.zeros_like( self.frame )
+        self.mergednframes = numpy.array([0])
+        self.parent.comm.Reduce(self.frame,   self.mergedframe,  op=MPI.SUM, root=self.reducer_rank)
+        self.parent.comm.Reduce(self.nframes,self.mergednframes, op=MPI.SUM, root=self.reducer_rank)
+
+
+        if self.parent.rank == self.reducer_rank:
+            self.output['figures'] = {'mean': {}, 'mean_hist': {}, }
+            fig = pylab.figure()
+            self.avg = self.mergedframe/float(self.mergednframes[0])
+            pylab.imshow(self.avg)
+            pylab.title('CSPAD average of {:} frames'.format(self.nframes))
+            pylab.savefig( os.path.join( self.parent.output_dir, 'figure_cspad.png' ))
+            self.output['figures']['mean']['png'] = os.path.join( self.parent.output_dir, 'figure_cspad.png')
+
+            fig.clear()
+            pylab.hist(self.avg.flatten(),1000)
+            pylab.title('histogram')
+            pylab.savefig( os.path.join( self.parent.output_dir, 'figure_cspad_hist.png' ))
+            self.output['figures']['mean_hist']['png'] = os.path.join( self.parent.output_dir, 'figure_cspad_hist.png')
+
+            del fig
+            self.parent.output.append(self.output)
+        return
+
+
+
 class epics_trend(event_process.event_process):
     def __init__(self):
         self.logger                      = logging.getLogger(__name__+'.epics_trend')
@@ -303,7 +404,7 @@ class acqiris(event_process.event_process):
         if self.raw_traces is None:
             self.logger.error('No acqiris found in event {:}'.format(self.parent.eventN))
             return
-        self.trace = list(self.raw_traces.data(5).waveforms()[0])
+        self.trace = list(self.raw_traces.data(0).waveforms()[0]) # or 5? idk
         self.peak = self.trace.index( max(self.trace) )
         for evr in self.parent.shared['evr']:
             #print "rank {:} evr {:} peak {:}".format(self.parent.rank, evr, peak )
@@ -530,8 +631,27 @@ class build_html(event_process.event_process):
         self.html.end_block()                                      #####################################################
 
         self.html.start_block('Analysis', id='analysis')
-        self.html.page.p('This is empty.')
-        self.html.end_block()
+        for thisep in sorted(gathered):                                                                                #
+            if thisep['in_report'] == 'analysis':                                                                     #
+                ep = thisep['in_report_title'].replace(' ','_')
+                self.html.start_subblock(thisep['in_report_title'],id=ep)                ################# a sub block #########    #
+                if 'text' in thisep:
+                    if isinstance(thisep['text'],list):
+                        for p in thisep['text']:
+                            self.html.page.p( p )
+                    else:
+                        self.html.page.p( thisep['text'] )
+                if 'table' in thisep:
+                    self.html.page.add( output_html.mk_table( thisep['table'] )() )                           #    #
+                if 'figures' in thisep:
+                    self.html.start_hidden(ep)                                       ######### the hidden part ##     #    #
+                    for img in sorted(thisep['figures']):                                               #     #    #
+                        self.html.page.img(src=os.path.basename(thisep['figures'][img]['png']),style='width:49%;')        #     #    #
+                    self.html.end_hidden()                                           ############################ #    #
+                self.html.end_subblock()                                    #######################################    #
+                                                                                                                       #
+                                                                                                                       #
+        self.html.end_block()                                      #####################################################
 
         self.html.start_block('Logging', id='logging')   ######################################## a block #############
         self.html.page.p('link to LSF log file.')                                                                     #
@@ -666,65 +786,80 @@ class add_all_devices(event_process.event_process):
         self.logger = logging.getLogger(__name__+'.add_all_devices')
         self.done = False
 
+    def add_device(self,kk):
+        alias = kk.alias()
+        if alias == '':
+            src = str(kk.src())
+            self.logger.info('alias is empty, falling back to src: "{:}"'.format(src))
+            if src == 'BldInfo(FEEGasDetEnergy)':
+                alias = 'Gasdet'
+            elif src == 'BldInfo(EBeam)':
+                alias = 'EBeam'
+            self.logger.info('setting alias to {:}'.format(alias))
+        if alias in self.devs:
+            self.logger.info(alias)
+            if 'summary_report' in self.devs[alias] and alias not in self.inserted:
+                self.logger.info('adding {:} to event processing'.format(alias))
+                self.logger.info(self.devs[alias]['summary_report'])
+                if alias=='Acqiris':
+                    thisjob = acqiris()
+                    thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['set_stuff']['args'],**self.devs[alias]['summary_report']['set_stuff']['kwargs'])
+                    self.parent.subjobs.insert( self.myindex, thisjob )
+                    self.newsubjobs.append(thisjob)
+                elif 'Ipimb' in alias:
+                    if 'epics_trend' in self.devs[alias]['summary_report']:
+                        thisjob = epics_trend()
+                        thisjob.add_pv_trend(self.devs[alias]['pvs']['targ']['base']+'.RBV')
+                        thisjob.add_pv_trend(self.devs[alias]['pvs']['x']['base']+'.RBV')
+                        thisjob.add_pv_trend(self.devs[alias]['pvs']['y']['base']+'.RBV')
+                        thisjob.output['in_report'] = 'detectors'
+                        thisjob.output['in_report_title'] = '{:} Epics Trends'.format(alias)
+                        self.parent.subjobs.insert( self.myindex, thisjob )
+                        self.newsubjobs.append(thisjob)
+                        thisjob = ipimb()
+                        thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['ipimb']['args'],**self.devs[alias]['summary_report']['ipimb']['kwargs'])
+                        thisjob.output['in_report'] = 'detectors'
+                        thisjob.output['in_report_title'] = '{:} Diode Voltages'.format(alias)
+                        self.parent.subjobs.insert( self.myindex, thisjob )
+                        self.newsubjobs.append(thisjob)
+                elif 'CsPad' in alias:
+                    if 'summary_report' in self.devs[alias]:
+                        thisjob = cspad()
+                        thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['set_stuff']['args'], **self.devs[alias]['summary_report']['set_stuff']['kwargs'])
+                        thisjob.output['in_report'] = 'analysis'
+                        thisjob.output['in_report_title'] = '{:}'.format(alias)
+                        self.parent.subjobs.insert( self.myindex, thisjob )
+                        self.newsubjobs.append(thisjob)
+                else:
+                    if 'simple_stats' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_stats']:
+                        thisjob = simple_stats()
+                        thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['simple_stats']['args'],**self.devs[alias]['summary_report']['simple_stats']['kwargs'])
+                        self.parent.subjobs.insert( self.myindex, thisjob )
+                        self.newsubjobs.append(thisjob)
+                    if 'simple_trends' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_trends']:
+                        thisjob = simple_trends()
+                        thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['simple_trends']['args'],**self.devs[alias]['summary_report']['simple_trends']['kwargs'])
+                        self.parent.subjobs.insert( self.myindex, thisjob )
+                        self.newsubjobs.append(thisjob)
+                # do something
+                self.inserted.append( alias )
+        return
+
+
     def event(self,evt):
         if not self.done:
-            keys = evt.keys()
-            myindex = self.parent.subjobs.index(self) + 1
-            self.logger.info('current subjob index is {:}'.format(myindex))
-            inserted = []
-            newsubjobs = []
-            for kk in keys:
-                alias = kk.alias()
-                if alias == '':
-                    src = str(kk.src())
-                    self.logger.info('alias is empty, falling back to src: "{:}"'.format(src))
-                    if src == 'BldInfo(FEEGasDetEnergy)':
-                        alias = 'Gasdet'
-                    elif src == 'BldInfo(EBeam)':
-                        alias = 'EBeam'
-                    self.logger.info('setting alias to {:}'.format(alias))
-                if alias in self.devs:
-                    self.logger.info(alias)
-                    if 'summary_report' in self.devs[alias] and alias not in inserted:
-                        self.logger.info('adding {:} to event processing'.format(alias))
-                        self.logger.info(self.devs[alias]['summary_report'])
-                        if alias=='Acqiris':
-                            thisjob = acqiris()
-                            thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['set_stuff']['args'],**self.devs[alias]['summary_report']['set_stuff']['kwargs'])
-                            self.parent.subjobs.insert( myindex, thisjob )
-                            newsubjobs.append(thisjob)
-                        elif 'Ipimb' in alias:
-                            if 'epics_trend' in self.devs[alias]['summary_report']:
-                                thisjob = epics_trend()
-                                thisjob.add_pv_trend(self.devs[alias]['pvs']['targ']['base']+'.RBV')
-                                thisjob.add_pv_trend(self.devs[alias]['pvs']['x']['base']+'.RBV')
-                                thisjob.add_pv_trend(self.devs[alias]['pvs']['y']['base']+'.RBV')
-                                thisjob.output['in_report'] = 'detectors'
-                                thisjob.output['in_report_title'] = '{:} Epics Trends'.format(alias)
-                                self.parent.subjobs.insert( myindex, thisjob )
-                                newsubjobs.append(thisjob)
-                                thisjob = ipimb()
-                                thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['ipimb']['args'],**self.devs[alias]['summary_report']['ipimb']['kwargs'])
-                                thisjob.output['in_report'] = 'detectors'
-                                thisjob.output['in_report_title'] = '{:} Diode Voltages'.format(alias)
-                                self.parent.subjobs.insert( myindex, thisjob )
-                                newsubjobs.append(thisjob)
-                        else:
-                            if 'simple_stats' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_stats']:
-                                thisjob = simple_stats()
-                                thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['simple_stats']['args'],**self.devs[alias]['summary_report']['simple_stats']['kwargs'])
-                                self.parent.subjobs.insert( myindex, thisjob )
-                                newsubjobs.append(thisjob)
-                            if 'simple_trends' in self.devs[alias]['summary_report'] and self.devs[alias]['summary_report']['simple_trends']:
-                                thisjob = simple_trends()
-                                thisjob.set_stuff(kk.src(),kk.type(),*self.devs[alias]['summary_report']['simple_trends']['args'],**self.devs[alias]['summary_report']['simple_trends']['kwargs'])
-                                self.parent.subjobs.insert( myindex, thisjob )
-                                newsubjobs.append(thisjob)
-                        inserted.append( alias )
-                        # do something
+            self.myindex = self.parent.subjobs.index(self) + 1
+            self.logger.info('current subjob index is {:}'.format(self.myindex))
+            self.inserted = []
+            self.newsubjobs = []
+            for kk in evt.keys():
+                self.add_device(kk) 
+            #for kk in self.parent.ds.env().configStore().keys():
+                #self.add_device(kk) 
+
             self.logger.info('finished adding new subjobs')
             ranks = range(self.parent.size)
-            for ii,nsj in enumerate(newsubjobs):
+            for ii,nsj in enumerate(self.newsubjobs):
                 nsj.set_parent(self.parent)
                 nsj.logger = logging.getLogger( self.parent.logger.name + '.' + nsj.logger.name.split('.')[-1] )
                 nsj.reducer_rank = ranks[ ii % len(ranks) ]
