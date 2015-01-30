@@ -803,6 +803,9 @@ class add_all_devices(event_process.event_process):
         self.devs = devs
         self.logger = logging.getLogger(__name__+'.add_all_devices')
         self.done = False
+        self.done_counter = 0
+        self.done_counter_max = 25
+        self.inserted = []
 
     def add_device(self,kk):
         alias = kk.alias()
@@ -868,7 +871,6 @@ class add_all_devices(event_process.event_process):
         if not self.done:
             self.myindex = self.parent.subjobs.index(self) + 1
             self.logger.info('current subjob index is {:}'.format(self.myindex))
-            self.inserted = []
             self.newsubjobs = []
             for kk in evt.keys():
                 self.add_device(kk) 
@@ -886,5 +888,8 @@ class add_all_devices(event_process.event_process):
                 nsj.event(evt)
 
             self.logger.info('finished setting up new subjobs')
-        self.done = True
+            self.done_counter += 1
+
+        if self.done_counter >= self.done_counter_max:
+            self.done = True
 
