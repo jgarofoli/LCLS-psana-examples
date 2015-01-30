@@ -64,7 +64,7 @@ class cspad(event_process.event_process):
 
     def add_frame(self,frame):
         if self.frame == None:
-            self.frame = numpy.zeros_like(frame)
+            self.frame = numpy.zeros_like(frame,dtype='float64')
 
         self.frame += frame
         self.nframes[0] += 1
@@ -91,7 +91,7 @@ class cspad(event_process.event_process):
     def endJob(self):
         self.logger.info('mpi reducing cspad')
 
-        self.mergedframe = numpy.zeros_like( self.frame )
+        self.mergedframe = numpy.zeros_like( self.frame, dtype='float64' )
         self.mergednframes = numpy.array([0])
         self.parent.comm.Reduce(self.frame,   self.mergedframe,  op=MPI.SUM, root=self.reducer_rank)
         self.parent.comm.Reduce(self.nframes,self.mergednframes, op=MPI.SUM, root=self.reducer_rank)
@@ -102,6 +102,7 @@ class cspad(event_process.event_process):
             fig = pylab.figure()
             self.avg = self.mergedframe/float(self.mergednframes[0])
             pylab.imshow(self.avg)
+            pylab.clim(850,1200)
             pylab.title('CSPAD average of {:} frames'.format(self.nframes))
             pylab.savefig( os.path.join( self.parent.output_dir, 'figure_cspad.png' ))
             self.output['figures']['mean']['png'] = os.path.join( self.parent.output_dir, 'figure_cspad.png')
