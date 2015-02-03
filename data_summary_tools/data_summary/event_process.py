@@ -37,6 +37,14 @@ class event_process(object):
     def endJob(self):
         return
 
+    def replicate_info(self):
+        return None
+
+    def describe_self(self):
+        # return a pickleable object (dictionary)
+        # that can be used to reproduce this instance (minus the data)
+        return (str(self.__class__).split('.')[-1].replace("'>",""), self.replicate_info() )
+
 #    def beginStep(self):
 #        return
 #    def endStep(self):

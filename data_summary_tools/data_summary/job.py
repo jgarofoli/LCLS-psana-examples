@@ -100,6 +100,33 @@ class job(object):
         #sj.logger.addHandler(self.logger_fh)
         self.subjobs.append(sj)
 
+    def check_subjobs(self, gsj):
+        data = {}
+        for ii in xrange(self.comm.size) :
+            data[ii] = gsj[ii]
+        # make the unified list of jobs, that all the ranks should replicate.
+        if len(data) > 1:
+            pass
+        return data
+
+    def update_subjobs_before_endJob(self):
+        #self.scattered_subjobs
+        # reorder subjobs if necessary
+        # add subjobs if necessary so all can reduce
+        return
+
+    def unify_ranks(self):
+        self.gathered_subjobs = self.comm.gather( [sj.describe_self() for sj in self.subjobs], root=0 )
+        if self.rank == 0:
+            self.scattered_subjobs = self.check_subjobs( self.gathered_subjobs )
+        else:
+            self.scattered_subjobs = None
+        self.scattered_subjobs = self.comm.scatter(self.scattered_subjobs, root=0 )
+        # instantiate the necessary subjobs in the right order (or reorder them, or whatever)
+        # and update the list of subjobs such that they are identical across all ranks.
+        self.update_subjobs_before_endJob()
+        return
+
     def gather_output(self):
         gathered_output = self.comm.gather( self.output, root=0 )
         timing = self.comm.gather(self.cputotal, root=0)
@@ -153,6 +180,10 @@ class job(object):
 
         self.logger.info( "rank {:} finishing".format( self.rank ) )
         self.cputotal = time.time() - self.cpustart
+
+        # do a pre endJob check to make sure all jobs have the same subjobs (unfinished)
+        self.unify_ranks()
+
         for sj in self.subjobs:
             sj.endJob()
 

@@ -28,6 +28,9 @@ class epics_scatter(event_process.event_process):
 
         return
 
+    def replicate_info(self):
+        return None
+
     def beginJob(self):
         self.epics = self.parent.ds.env().epicsStore()
         self.allPvs = self.epics.names()
@@ -75,6 +78,11 @@ class cspad(event_process.event_process):
         self.dev         = psana_device
         self.output['in_report']         = in_report
         self.output['in_report_title']   = in_report_title
+
+    def replicate_info(self):
+        args = ( self.src, self.dev )
+        kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'] }
+        return ('set_stuff',args,kwargs)
 
     def event(self,evt):
         cspad = evt.get(self.dev, self.src)
@@ -132,6 +140,9 @@ class epics_trend(event_process.event_process):
         self.output['in_report']         = None
         self.output['in_report_title']   = None
 
+    def replicate_info(self):
+        return ('add_pv_trend',self.channels_to_trend,{})
+
     def beginJob(self):
         self.epics       = self.parent.ds.env().epicsStore()
         self.allPvs      = self.epics.names()
@@ -149,9 +160,10 @@ class epics_trend(event_process.event_process):
             self.trends[chan] = toolbox.mytrend(self.period_window)
         return
 
-    def add_pv_trend(self,chan):
-        if chan not in self.channels_to_trend:
-            self.channels_to_trend.append(chan)
+    def add_pv_trend(self,*chans):
+        for chan in chans:
+            if chan not in self.channels_to_trend:
+                self.channels_to_trend.append(chan)
         return
 
     def event(self,evt):
@@ -282,6 +294,11 @@ class simple_trends(event_process.event_process):
         self.output['in_report_title'] = in_report_title
         return
 
+    def replicate_info(self):
+        args = ( self.src, self.dev, self.dev_attrs, self.period_window )
+        kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'] }
+        return ('set_stuff',args,kwargs)
+
     def beginJob(self):
         self.trends = {}
         for attr in self.dev_attrs:
@@ -336,6 +353,11 @@ class simple_stats(event_process.event_process):
         self.output['in_report'] = in_report
         self.output['in_report_title'] = in_report_title
         self.logger = logging.getLogger(__name__+'.simple_stats')
+
+    def replicate_info(self):
+        args = ( self.src, self.dev, self.dev_attrs, self.hist_ranges )
+        kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'] }
+        return ('set_stuff',args,kwargs)
 
     def beginJob(self):
         self.histograms = {}
@@ -403,11 +425,18 @@ class acqiris(event_process.event_process):
         self.histmax = histmax
         return
 
+    def replicate_info(self):
+        args = ( self.src, self.dev)
+        kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'], 
+                'histmin': self.histmin, 'histmax': self.histmax }
+        return ('set_stuff',args,kwargs)
+
     def event(self,evt):
         self.raw_traces = evt.get(self.dev,self.src)
         if self.raw_traces is None:
             self.logger.error('No acqiris found in event {:}'.format(self.parent.eventN))
             return
+        self.logger.debug( 'acqiris traces = {:}'.format(self.raw_traces.data_shape() ))
         self.trace = list(self.raw_traces.data(0).waveforms()[0]) # or 5? idk
         self.peak = self.trace.index( max(self.trace) )
         for evr in self.parent.shared['evr']:
@@ -739,6 +768,12 @@ class ipimb(event_process.event_process):
         self.period_window = period_window
         return
 
+    def replicate_info(self):
+        args = ( self.src, self.dev)
+        kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'], 
+                'period_window': self.period_window }
+        return ('set_stuff',args,kwargs)
+    
     def beginJob(self):
         #print "rank {:}".format(self.parent.rank)
         self.trends = {}
