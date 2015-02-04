@@ -5,6 +5,7 @@ import output_html
 import psana
 import time
 import math
+import packunpack as pup
 
 __version__ = 0.2
 
@@ -97,28 +98,33 @@ class job(object):
         sj.set_parent(self)
         
         sj.logger = logging.getLogger( self.logger.name + '.' + sj.logger.name.split('.')[-1] )
+
         #sj.logger.addHandler(self.logger_fh)
+
         self.subjobs.append(sj)
 
     def check_subjobs(self, gsj):
         data = {}
         for ii in xrange(self.comm.size) :
-            data[ii] = gsj[ii]
+            data[ii] = set(tuple(gsj[ii]))
         # make the unified list of jobs, that all the ranks should replicate.
+        unified = None
         if len(data) > 1:
-            pass
-        return data
+            unified = data[0].union( data[1:] )
+        return unified
 
     def update_subjobs_before_endJob(self):
-        #self.scattered_subjobs
+        print self.rank, self.scattered_subjobs
         # reorder subjobs if necessary
         # add subjobs if necessary so all can reduce
         return
 
     def unify_ranks(self):
-        self.gathered_subjobs = self.comm.gather( [sj.describe_self() for sj in self.subjobs], root=0 )
+        subjob_data = [sj.describe_self() for sj in self.subjobs]
+
+        self.gathered_subjobs = self.comm.gather( pup.pack(subjob_data) , root=0 )
         if self.rank == 0:
-            self.scattered_subjobs = self.check_subjobs( self.gathered_subjobs )
+            self.scattered_subjobs = self.check_subjobs( pup.unpack( self.gathered_subjobs[0] ) )
         else:
             self.scattered_subjobs = None
         self.scattered_subjobs = self.comm.scatter(self.scattered_subjobs, root=0 )

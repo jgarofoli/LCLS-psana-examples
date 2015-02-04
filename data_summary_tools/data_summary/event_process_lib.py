@@ -17,6 +17,9 @@ import pprint
 #code.interact(None,None,locals())
 #logger = logging.getLogger('data_summary.event_process_lib')
 
+def strtype(dev):
+    return str(dev).split("'")[1]
+
 class epics_scatter(event_process.event_process):
     def __init__(self):
         self.logger                      = logging.getLogger(__name__+'.epics_scatter')
@@ -80,8 +83,10 @@ class cspad(event_process.event_process):
         self.output['in_report_title']   = in_report_title
 
     def replicate_info(self):
-        args = ( self.src, self.dev )
+        args = ( str(self.src), strtype(self.dev) )
         kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'] }
+        self.logger.info('args: {:}'.format(repr(args)))
+        self.logger.info('kwargs: {:}'.format(repr(kwargs)))
         return ('set_stuff',args,kwargs)
 
     def event(self,evt):
@@ -141,7 +146,7 @@ class epics_trend(event_process.event_process):
         self.output['in_report_title']   = None
 
     def replicate_info(self):
-        return ('add_pv_trend',self.channels_to_trend,{})
+        return ('add_pv_trend',tuple(self.channels_to_trend),{})
 
     def beginJob(self):
         self.epics       = self.parent.ds.env().epicsStore()
@@ -295,8 +300,10 @@ class simple_trends(event_process.event_process):
         return
 
     def replicate_info(self):
-        args = ( self.src, self.dev, self.dev_attrs, self.period_window )
+        args = ( str(self.src), strtype(self.dev), self.dev_attrs, self.period_window )
         kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'] }
+        self.logger.info('args: {:}'.format(repr(args)))
+        self.logger.info('kwargs: {:}'.format(repr(kwargs)))
         return ('set_stuff',args,kwargs)
 
     def beginJob(self):
@@ -355,8 +362,10 @@ class simple_stats(event_process.event_process):
         self.logger = logging.getLogger(__name__+'.simple_stats')
 
     def replicate_info(self):
-        args = ( self.src, self.dev, self.dev_attrs, self.hist_ranges )
+        args = ( str(self.src), strtype(self.dev), tuple(self.dev_attrs), self.hist_ranges )
         kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'] }
+        self.logger.info('args: {:}'.format(repr(args)))
+        self.logger.info('kwargs: {:}'.format(repr(kwargs)))
         return ('set_stuff',args,kwargs)
 
     def beginJob(self):
@@ -426,9 +435,11 @@ class acqiris(event_process.event_process):
         return
 
     def replicate_info(self):
-        args = ( self.src, self.dev)
+        args = ( str(self.src), strtype(self.dev))
         kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'], 
                 'histmin': self.histmin, 'histmax': self.histmax }
+        self.logger.info('args: {:}'.format(repr(args)))
+        self.logger.info('kwargs: {:}'.format(repr(kwargs)))
         return ('set_stuff',args,kwargs)
 
     def event(self,evt):
@@ -769,9 +780,11 @@ class ipimb(event_process.event_process):
         return
 
     def replicate_info(self):
-        args = ( self.src, self.dev)
+        args = ( str(self.src), strtype(self.dev))
         kwargs = { 'in_report': self.output['in_report'], 'in_report_title': self.output['in_report_title'], 
                 'period_window': self.period_window }
+        self.logger.info('args: {:}'.format(repr(args)))
+        self.logger.info('kwargs: {:}'.format(repr(kwargs)))
         return ('set_stuff',args,kwargs)
     
     def beginJob(self):
