@@ -12,6 +12,8 @@ at the LCLS CXI user facility.  It should also work with other hutches.
 The tool can run on a single node, with [MPI](http://www.open-mpi.org),
 or be submitted to a batch MPI pool.
 
+Note: requires data_summary_tools (below).
+
 ### data_summary_tools_html
 
 The HTML (bootstrap, jquery) framework used to produce the output

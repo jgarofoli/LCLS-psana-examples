@@ -4,6 +4,8 @@ A tool to prepare an html report of the data run.
 Uses bootstrap and a couple of other packages, but the dependencies 
 are packaged in this directory.
 
+Note: requires data_summary_html also.
+
 ## Checkout just this directory
 
 Use git sparse checkout.
