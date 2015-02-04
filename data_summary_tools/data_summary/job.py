@@ -108,10 +108,10 @@ class job(object):
         for ii in xrange(self.comm.size) :
             data[ii] = set(tuple(gsj[ii]))
         # make the unified list of jobs, that all the ranks should replicate.
-        unified = None
+        self.unified = None
         if len(data) > 1:
-            unified = data[0].union( data[1:] )
-        return unified
+            self.unified = data[0].union( data[1:] )
+        return pup.unpack(self.unified)
 
     def update_subjobs_before_endJob(self):
         print self.rank, self.scattered_subjobs
@@ -124,7 +124,7 @@ class job(object):
 
         self.gathered_subjobs = self.comm.gather( pup.pack(subjob_data) , root=0 )
         if self.rank == 0:
-            self.scattered_subjobs = self.check_subjobs( pup.unpack( self.gathered_subjobs[0] ) )
+            self.scattered_subjobs = self.check_subjobs( self.gathered_subjobs[0] )
         else:
             self.scattered_subjobs = None
         self.scattered_subjobs = self.comm.scatter(self.scattered_subjobs, root=0 )

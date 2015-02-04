@@ -23,6 +23,8 @@ def pack(oo):
 
 def unpack(pp):
     logger.debug( 'unpack ' + repr( pp ) )
+    if pp is None:
+        return pp
     if pp[0] == 'dict':
         return dict( [(p[0],unpack(p[1])) for p in pp[1]] )
     elif pp[0] == 'list':
