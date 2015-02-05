@@ -5,6 +5,7 @@ import output_html
 import psana
 import time
 import math
+import packunpack as pup
 
 __version__ = 0.2
 
@@ -97,8 +98,41 @@ class job(object):
         sj.set_parent(self)
         
         sj.logger = logging.getLogger( self.logger.name + '.' + sj.logger.name.split('.')[-1] )
+
         #sj.logger.addHandler(self.logger_fh)
+
         self.subjobs.append(sj)
+
+    def check_subjobs(self, gsj):
+        data = {}
+        for ii in xrange(self.comm.size) :
+            data[ii] = set(tuple(gsj[ii]))
+        # make the unified list of jobs, that all the ranks should replicate.
+        self.unified = None
+        if len(data) > 1:
+            self.unified = data[0].union( data[1:] )
+        return pup.unpack(self.unified)
+
+    def update_subjobs_before_endJob(self):
+        print self.rank, self.scattered_subjobs
+        # reorder subjobs if necessary
+        # add subjobs if necessary so all can reduce
+        return
+
+    def unify_ranks(self):
+        subjob_data = [sj.describe_self() for sj in self.subjobs]
+        self.logger.info('subjobs at end: {:}'.format(subjob_data))
+
+        #self.gathered_subjobs = self.comm.gather( pup.pack(subjob_data) , root=0 )
+        #if self.rank == 0:
+        #    self.scattered_subjobs = self.check_subjobs( self.gathered_subjobs[0] )
+        #else:
+        #    self.scattered_subjobs = None
+        #self.scattered_subjobs = self.comm.scatter(self.scattered_subjobs, root=0 )
+        ## instantiate the necessary subjobs in the right order (or reorder them, or whatever)
+        ## and update the list of subjobs such that they are identical across all ranks.
+        #self.update_subjobs_before_endJob()
+        return
 
     def gather_output(self):
         gathered_output = self.comm.gather( self.output, root=0 )
@@ -117,7 +151,8 @@ class job(object):
         # assign reducer_rank for the subjobs (just cycle through the available nodes)
         ranks = range(self.size)
         for ii,sj in enumerate(self.subjobs):
-            sj.reducer_rank = ranks[ ii % len(ranks) ]
+            #sj.reducer_rank = ranks[ ii % len(ranks) ]
+            sj.reducer_rank = 0
 
 
         for sj in self.subjobs:
@@ -153,6 +188,10 @@ class job(object):
 
         self.logger.info( "rank {:} finishing".format( self.rank ) )
         self.cputotal = time.time() - self.cpustart
+
+        # do a pre endJob check to make sure all jobs have the same subjobs (unfinished)
+        self.subjobs[5:-1] = sorted(self.subjobs[5:-1]) # sort all jobs except first and last
+        self.unify_ranks()
         for sj in self.subjobs:
             sj.endJob()
 

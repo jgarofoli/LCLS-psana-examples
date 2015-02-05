@@ -37,3 +37,11 @@ Used by output_html.py.
 Generates the report html file.
 
 ## toolbox.py
+
+A small library of data types for the subjobs.
+
+## packunpack.py
+
+Library to convert unhashable native objects (dicts, lists) to hashable tuples
+in a reversible manner.  Provides the forward (pack) and reverse (unpack)
+algorithms.
