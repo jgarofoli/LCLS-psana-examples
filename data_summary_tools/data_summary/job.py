@@ -1,11 +1,13 @@
 from mpi4py import MPI
 import logging
 import os
+import sys
 import output_html
 import psana
 import time
 import math
 import packunpack as pup
+import hashlib
 
 __version__ = 0.2
 
@@ -64,13 +66,28 @@ class job(object):
         elif os.path.isdir(self.output_dir) and self.rank==0:
             self.smart_rename(self.output_dir)
             os.mkdir(self.output_dir)
-        time.sleep(1)
-        os.chdir(self.output_dir)
+        self.logger.info('waiting for rank 0 to set up directories..')
+        outdir = self.comm.bcast(self.output_dir,root=0) # block and wait for rank0 to finish the directory stuff
+        self.logger.info('waiting for rank 0 to set up directories..done')
+        if outdir == self.output_dir:
+            os.chdir(self.output_dir)
+            self.logger.info('changing directory to {:} (output_dir)'.format(self.output_dir))
+        else:
+            os.chdir(outdir)
+            self.logger.info('changing directory to {:} (outdir)'.format(outdir))
         self.logger_fh = logging.FileHandler('log_{:0.0f}.log'.format(self.rank))
         self.logger_fh.setLevel(logging.DEBUG)
         self.logger_fh.setFormatter( logging.Formatter( '%(asctime)s - %(levelname)s - %(name)s - %(message)s' ) )
         self.logger.addHandler( self.logger_fh )
         self.logger.info( "output directory is "+self.output_dir )
+        self.version_info()
+        return
+
+    def version_info(self):
+        # put a bunch of stuff in the log file about all the files
+        thisfile = os.path.dirname(unicode(__file__,sys.getfilesystemencoding()))
+        self.logger.info('last modified {:}, file {:}'.format(time.ctime(os.path.getmtime(thisfile)),thisfile))
+
         return
 
     def set_maxEventsPerNode(self,n):
