@@ -447,7 +447,7 @@ class acqiris(event_process.event_process):
         if self.raw_traces is None:
             self.logger.error('No acqiris found in event {:}'.format(self.parent.eventN))
             return
-        self.logger.debug( 'acqiris traces = {:}'.format(self.raw_traces.data_shape() ))
+        #self.logger.debug( 'acqiris traces = {:}'.format(self.raw_traces.data_shape() ))
         self.trace = list(self.raw_traces.data(0).waveforms()[0]) # or 5? idk
         self.peak = self.trace.index( max(self.trace) )
         for evr in self.parent.shared['evr']:
@@ -869,7 +869,8 @@ class add_all_devices(event_process.event_process):
         ranks = range(self.parent.size)
         nsj.set_parent(self.parent)
         nsj.logger = logging.getLogger( self.parent.logger.name + '.' + nsj.logger.name.split('.')[-1] )
-        nsj.reducer_rank = ranks[ len(self.inserted) % len(ranks) ]
+        #nsj.reducer_rank = ranks[ len(self.inserted) % len(ranks) ]
+        nsj.reducer_rank = 0
         nsj.beginJob()
         nsj.beginRun()
         nsj.event(evt)

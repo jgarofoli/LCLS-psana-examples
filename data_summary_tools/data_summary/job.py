@@ -121,16 +121,17 @@ class job(object):
 
     def unify_ranks(self):
         subjob_data = [sj.describe_self() for sj in self.subjobs]
+        self.logger.info('subjobs at end: {:}'.format(subjob_data))
 
-        self.gathered_subjobs = self.comm.gather( pup.pack(subjob_data) , root=0 )
-        if self.rank == 0:
-            self.scattered_subjobs = self.check_subjobs( self.gathered_subjobs[0] )
-        else:
-            self.scattered_subjobs = None
-        self.scattered_subjobs = self.comm.scatter(self.scattered_subjobs, root=0 )
-        # instantiate the necessary subjobs in the right order (or reorder them, or whatever)
-        # and update the list of subjobs such that they are identical across all ranks.
-        self.update_subjobs_before_endJob()
+        #self.gathered_subjobs = self.comm.gather( pup.pack(subjob_data) , root=0 )
+        #if self.rank == 0:
+        #    self.scattered_subjobs = self.check_subjobs( self.gathered_subjobs[0] )
+        #else:
+        #    self.scattered_subjobs = None
+        #self.scattered_subjobs = self.comm.scatter(self.scattered_subjobs, root=0 )
+        ## instantiate the necessary subjobs in the right order (or reorder them, or whatever)
+        ## and update the list of subjobs such that they are identical across all ranks.
+        #self.update_subjobs_before_endJob()
         return
 
     def gather_output(self):
@@ -150,7 +151,8 @@ class job(object):
         # assign reducer_rank for the subjobs (just cycle through the available nodes)
         ranks = range(self.size)
         for ii,sj in enumerate(self.subjobs):
-            sj.reducer_rank = ranks[ ii % len(ranks) ]
+            #sj.reducer_rank = ranks[ ii % len(ranks) ]
+            sj.reducer_rank = 0
 
 
         for sj in self.subjobs:
@@ -188,8 +190,8 @@ class job(object):
         self.cputotal = time.time() - self.cpustart
 
         # do a pre endJob check to make sure all jobs have the same subjobs (unfinished)
+        self.subjobs[5:-1] = sorted(self.subjobs[5:-1]) # sort all jobs except first and last
         self.unify_ranks()
-
         for sj in self.subjobs:
             sj.endJob()
 
