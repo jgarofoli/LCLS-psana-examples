@@ -85,8 +85,20 @@ class job(object):
 
     def version_info(self):
         # put a bunch of stuff in the log file about all the files
-        thisfile = os.path.dirname(unicode(__file__,sys.getfilesystemencoding()))
-        self.logger.info('last modified {:}, file {:}'.format(time.ctime(os.path.getmtime(thisfile)),thisfile))
+        thisdir = os.path.dirname( os.path.abspath( unicode( __file__,sys.getfilesystemencoding() ) ) )
+        #self.logger.info('last modified {:}, file {:}'.format(time.ctime(os.path.getmtime(thisfile)),thisfile))
+
+        def myfun(arg,dirname,fnames):
+            self.logger.info('module version: {:}'.format(__version__) )
+            for ff in sorted(fnames):
+                if '.pyc' in ff:
+                    continue
+                self.logger.info('last modified {:}, file {:}'.format( 
+                    time.ctime( os.path.getmtime( os.path.join( dirname, ff ) ) ) ,
+                    os.path.join( dirname, ff ) 
+                    ) )
+
+        os.path.walk( thisdir, myfun, None)
 
         return
 
